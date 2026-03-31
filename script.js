@@ -1,69 +1,114 @@
 /* ════════════════════════════════════════════
    FIREBASE — SDK v10 (modular via CDN compat)
 ════════════════════════════════════════════ */
-// Importado via <script> no index.html (CDN compat mode)
-// Referências globais preenchidas em initFirebase()
 let _db = null;
 
 function initFirebase() {
   firebase.initializeApp(firebaseConfig);
   _db = firebase.firestore();
-  // Habilita persistência offline (funciona mesmo sem internet)
   _db.enablePersistence({ synchronizeTabs: true }).catch(() => {});
 }
 
 /* ════════════════════════════════════════════
-   DB — camada de acesso ao Firestore
-   Substitui completamente o localStorage.
-   Cada "chave" vira um documento em /finpanel/{key}
-   com o campo "data" contendo o valor serializado.
+   DB — dados isolados por usuário no Firestore
+   
+   Estrutura no Firestore:
+     /global/dados/{chave}          → compartilhado: lista de usuários
+     /usuarios/{userId}/dados/{chave} → privado: dados de cada usuário
+   
+   Chaves globais (compartilhadas entre todos):
+     usuarios, theme, sidebarCollapsed
+   
+   Chaves privadas (isoladas por usuário logado):
+     salarios, extras, saidas, entradas,
+     investimentos, criterios, tiposConta, tiposInvest
 ════════════════════════════════════════════ */
-const DB = {
-  /* Cache local para leitura síncrona (necessária para a UI atual) */
-  _cache: {},
+const CHAVES_GLOBAIS = new Set(['usuarios','theme','sidebarCollapsed']);
 
-  /* Leitura síncrona do cache (igual ao localStorage anterior) */
+const DB = {
+  _cache: {},
+  _unsubscribe: null,   // cancela listener anterior ao trocar de usuário
+
+  /* Retorna a coleção correta para a chave */
+  _col(k) {
+    if (CHAVES_GLOBAIS.has(k)) {
+      return _db.collection('global').doc('dados').collection('chaves');
+    }
+    const uid = currentUser ? String(currentUser.id) : '_anon';
+    return _db.collection('usuarios').doc(uid).collection('dados');
+  },
+
   get(k) {
     return this._cache[k] !== undefined ? this._cache[k] : null;
   },
 
-  /* Escrita: atualiza cache E persiste no Firestore */
   set(k, v) {
     this._cache[k] = v;
     if (_db) {
-      _db.collection('finpanel').doc(k).set({ data: JSON.stringify(v) })
+      this._col(k).doc(k).set({ data: JSON.stringify(v) })
         .catch(err => console.error('Firestore set error:', k, err));
     }
   },
 
-  /* Carrega TODOS os documentos do Firestore para o cache local */
+  /* Carrega dados globais + dados do usuário logado */
   async loadAll() {
     if (!_db) return;
+    this._cache = {};
     try {
-      const snapshot = await _db.collection('finpanel').get();
-      snapshot.forEach(doc => {
-        try { this._cache[doc.id] = JSON.parse(doc.data().data); }
-        catch { this._cache[doc.id] = null; }
+      // Dados globais
+      const snapGlobal = await _db.collection('global').doc('dados').collection('chaves').get();
+      snapGlobal.forEach(doc => {
+        try { this._cache[doc.id] = JSON.parse(doc.data().data); } catch {}
       });
+      // Dados privados do usuário logado
+      if (currentUser) {
+        const uid = String(currentUser.id);
+        const snapUser = await _db.collection('usuarios').doc(uid).collection('dados').get();
+        snapUser.forEach(doc => {
+          try { this._cache[doc.id] = JSON.parse(doc.data().data); } catch {}
+        });
+      }
     } catch (err) {
       console.error('Firestore loadAll error:', err);
     }
   },
 
-  /* Inscreve listener em tempo real para manter o cache atualizado */
+  /* Listener em tempo real — escuta global + dados do usuário logado */
   listenAll(onUpdate) {
     if (!_db) return;
-    _db.collection('finpanel').onSnapshot(snapshot => {
+    if (this._unsubscribe) { this._unsubscribe(); this._unsubscribe = null; }
+
+    const applyChanges = (snapshot) => {
       snapshot.docChanges().forEach(change => {
         if (change.type === 'removed') {
           delete this._cache[change.doc.id];
         } else {
-          try { this._cache[change.doc.id] = JSON.parse(change.doc.data().data); }
-          catch { this._cache[change.doc.id] = null; }
+          try { this._cache[change.doc.id] = JSON.parse(change.doc.data().data); } catch {}
         }
       });
       if (onUpdate) onUpdate();
-    }, err => console.error('Firestore listener error:', err));
+    };
+
+    const unsubGlobal = _db.collection('global').doc('dados').collection('chaves')
+      .onSnapshot(applyChanges, err => console.error('Firestore global listener:', err));
+
+    let unsubUser = () => {};
+    if (currentUser) {
+      const uid = String(currentUser.id);
+      unsubUser = _db.collection('usuarios').doc(uid).collection('dados')
+        .onSnapshot(applyChanges, err => console.error('Firestore user listener:', err));
+    }
+
+    this._unsubscribe = () => { unsubGlobal(); unsubUser(); };
+  },
+
+  /* Ao fazer logout, limpa cache privado e cancela listener */
+  clearUserData() {
+    if (this._unsubscribe) { this._unsubscribe(); this._unsubscribe = null; }
+    const keysToKeep = [...CHAVES_GLOBAIS];
+    Object.keys(this._cache).forEach(k => {
+      if (!keysToKeep.includes(k)) delete this._cache[k];
+    });
   },
 
   /* Inicializa chaves padrão se não existirem */
@@ -131,7 +176,7 @@ function initSidebar(){
 ════════════════════════════════════════════ */
 let currentUser=null;
 
-function fazerLogin(){
+async function fazerLogin(){
   const nome=document.getElementById('loginUser').value.trim();
   const senha=document.getElementById('loginPass').value;
   const err=document.getElementById('loginError');
@@ -140,6 +185,15 @@ function fazerLogin(){
   err.classList.remove('visible');
   currentUser=user;
   sessionStorage.setItem('fp_session',JSON.stringify({userId:user.id}));
+  /* Carrega os dados privados do usuário e inicia listener isolado */
+  mostrarLoading('Carregando seus dados…');
+  await DB.loadAll();
+  DB.init();
+  DB.listenAll(()=>{
+    renderizarTudo();
+    renderCriterios();renderTiposConta();renderTiposInvest();
+  });
+  ocultarLoading();
   entrarNoApp();
   Toast.show(`Bem-vindo, ${user.nome}!`,'success');
 }
@@ -149,11 +203,16 @@ function entrarNoApp(silent=false){
   ls.classList.add('hidden');
   setTimeout(()=>{ls.style.display='none';app.classList.add('visible');},350);
   atualizarAvatar();
+  reconstruirFiltros();
+  renderizarTudo();
+  renderCriterios();renderTiposConta();renderTiposInvest();
   const ultimaAba=sessionStorage.getItem('fp_tab')||'salario';
   navigateTo(ultimaAba,true);
 }
 
 function fazerLogout(){
+  /* Para listener e limpa dados privados do cache */
+  DB.clearUserData();
   currentUser=null;
   sessionStorage.removeItem('fp_session');
   sessionStorage.removeItem('fp_tab');
@@ -168,7 +227,7 @@ function fazerLogout(){
   Toast.show('Sessão encerrada','info');
 }
 
-function tentarRestaurarSessao(){
+async function tentarRestaurarSessao(){
   const sess=sessionStorage.getItem('fp_session');
   if(!sess)return false;
   try{
@@ -176,6 +235,13 @@ function tentarRestaurarSessao(){
     const user=(DB.get('usuarios')||[]).find(u=>u.id===userId);
     if(!user)return false;
     currentUser=user;
+    /* Carrega dados privados do usuário restaurado */
+    await DB.loadAll();
+    DB.init();
+    DB.listenAll(()=>{
+      renderizarTudo();
+      renderCriterios();renderTiposConta();renderTiposInvest();
+    });
     return true;
   }catch{return false;}
 }
@@ -890,26 +956,18 @@ async function init() {
     return;
   }
 
-  /* 2. Carrega todos os dados do Firestore para o cache */
+  /* 2. Carrega apenas dados GLOBAIS (usuarios, theme).
+        Dados privados só são carregados APÓS o login. */
   mostrarLoading('Carregando dados…');
-  await DB.loadAll();
+  await DB.loadAll();   // currentUser ainda é null -> só busca globais
 
-  /* 3. Inicializa chaves padrão se o banco estiver vazio */
-  DB.init();
-
-  /* 4. Inicia listener em tempo real (sincroniza entre dispositivos) */
-  DB.listenAll(() => {
-    // Quando outro dispositivo salva dados, re-renderiza a UI
-    renderizarTudo();
-    renderCriterios();
-    renderTiposConta();
-    renderTiposInvest();
-    renderUsers();
-  });
+  /* 3. Inicializa chaves globais padrão se banco estiver vazio */
+  if (!DB.get('usuarios')) DB.set('usuarios', [{id:1,nome:'Administrador',perfil:'admin',senha:'admin123'}]);
+  if (!DB.get('theme'))    DB.set('theme', 'dark');
 
   ocultarLoading();
 
-  /* --- Setup visual (igual ao original) --- */
+  /* --- Setup visual --- */
   initTheme();
   initSidebar();
 
@@ -925,14 +983,9 @@ async function init() {
   filtroAno = ym.split('-')[0];
   filtroRef = ym;
 
-  reconstruirFiltros();
-  renderizarTudo();
-  renderCriterios();
-  renderTiposConta();
-  renderTiposInvest();
-  renderUsers();
-
-  if (tentarRestaurarSessao()) {
+  /* 4. Tenta restaurar sessao (carrega dados do usuario se sessao existir) */
+  const restaurado = await tentarRestaurarSessao();
+  if (restaurado) {
     entrarNoApp(true);
   }
 
