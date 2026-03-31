@@ -23,10 +23,10 @@
 ════════════════════════════════════════════ */
 
 const firebaseConfig = {
-  apiKey:            "COLE_AQUI_SUA_API_KEY",
-  authDomain:        "COLE_AQUI.firebaseapp.com",
-  projectId:         "COLE_AQUI_SEU_PROJECT_ID",
-  storageBucket:     "COLE_AQUI.appspot.com",
-  messagingSenderId: "COLE_AQUI_SENDER_ID",
-  appId:             "COLE_AQUI_APP_ID"
+  apiKey: "AIzaSyBboODI6OWY-MkzeM2acgcXCu33_pGt5Ro",
+  authDomain: "painel-financeiro-316bc.firebaseapp.com",
+  projectId: "painel-financeiro-316bc",
+  storageBucket: "painel-financeiro-316bc.firebasestorage.app",
+  messagingSenderId: "237593887820",
+  appId: "1:237593887820:web:22071fd05bfee8822260e9"
 };
