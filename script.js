@@ -940,6 +940,43 @@ function ocultarLoading() {
   if (el) el.remove();
 }
 
+
+/* ════════════════════════════════════════════
+   SIDEBAR MOBILE
+════════════════════════════════════════════ */
+function isMobile() { return window.innerWidth <= 768; }
+
+function toggleMobileSidebar() {
+  const sb = document.getElementById('sidebar');
+  const bd = document.getElementById('sidebarBackdrop');
+  const isOpen = sb.classList.contains('mobile-open');
+  if (isOpen) {
+    sb.classList.remove('mobile-open');
+    bd.classList.remove('visible');
+  } else {
+    sb.classList.add('mobile-open');
+    bd.classList.add('visible');
+  }
+}
+
+function closeMobileSidebar() {
+  document.getElementById('sidebar').classList.remove('mobile-open');
+  document.getElementById('sidebarBackdrop').classList.remove('visible');
+}
+
+function syncHamburger() {
+  const btn = document.getElementById('hamburgerBtn');
+  if (!btn) return;
+  btn.style.display = isMobile() ? 'flex' : 'none';
+  if (!isMobile()) closeMobileSidebar();
+}
+
+window.addEventListener('resize', syncHamburger);
+
+/* Fecha sidebar ao navegar no mobile */
+const _origNavigateTo = navigateTo;
+// (monkey-patch feito no init)
+
 /* ════════════════════════════════════════════
    INIT — agora assíncrono por causa do Firebase
 ════════════════════════════════════════════ */
@@ -988,6 +1025,13 @@ async function init() {
   if (restaurado) {
     entrarNoApp(true);
   }
+
+  syncHamburger();
+
+  /* Fecha sidebar ao clicar em item de menu no mobile */
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => { if (isMobile()) closeMobileSidebar(); });
+  });
 
   document.getElementById('loginUser').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('loginPass').focus(); });
   document.getElementById('loginPass').addEventListener('keydown', e => { if(e.key==='Enter') fazerLogin(); });
