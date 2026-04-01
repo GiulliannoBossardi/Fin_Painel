@@ -565,6 +565,8 @@
 <div class="modal-overlay hidden" id="modalExcluirInvest"><div class="modal"><div class="modal-header"><div class="modal-title">Excluir Registro</div><button class="modal-close" onclick="closeModal('modalExcluirInvest')">✕</button></div><p style="font-size:.88rem;color:var(--text-secondary);line-height:1.6;">Excluir o registro <strong id="deleteInvestDesc" style="color:var(--text-primary);"></strong>?</p><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('modalExcluirInvest')">Cancelar</button><button class="btn btn-danger" onclick="confirmarExclusaoInvest()">Excluir</button></div></div></div>
 
 <!-- Firebase SDK (compat mode — funciona com o script.js) -->
+<!-- SheetJS para exportação XLSX -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <!-- Sua configuração Firebase (preencha firebase-config.js) -->

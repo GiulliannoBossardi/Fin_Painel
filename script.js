@@ -944,66 +944,59 @@ function renderCtrlTable(){
    EXPORTAR CONSOLIDADO — XLSX
 ════════════════════════════════════════════ */
 function exportarConsolidadoXlsx(){
-  /* Garante que a lib SheetJS está carregada */
   if(typeof XLSX==='undefined'){
-    const s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-    s.onload=_gerarXlsx;
-    document.head.appendChild(s);
-  } else {
-    _gerarXlsx();
+    Toast.show('Biblioteca XLSX não carregada. Verifique sua conexão.','error',5000);
+    return;
   }
-}
 
-function _gerarXlsx(){
-  /* Coleta linhas já filtradas (mesmo estado da tabela visível) */
+  /* Coleta linhas filtradas (mesmo estado da tabela) */
   let linhas=getLinhasCtrl(filtroAno,filtroRef);
   const cfCRef=cf('cfCtrlRef'),cfCOrig=cf('cfCtrlOrigem'),cfCTipo=cf('cfCtrlTipo'),cfCDesc=cf('cfCtrlDesc');
   if(cfCRef)  linhas=linhas.filter(l=>Fmt.ref(l.ref).toLowerCase().includes(cfCRef));
   if(cfCOrig) linhas=linhas.filter(l=>(l.origem||'').toLowerCase().includes(cfCOrig));
   if(cfCTipo) linhas=linhas.filter(l=>(l.tipo||'').toLowerCase().includes(cfCTipo));
   if(cfCDesc) linhas=linhas.filter(l=>(l.descricao||'').toLowerCase().includes(cfCDesc));
+
   const{col,dir}=ctrlMainSortSt;
   linhas.sort((a,b)=>{let av,bv;if(col==='ref')av=a.ref,bv=b.ref;else if(col==='origem')av=a.origem,bv=b.origem;else if(col==='tipo')av=a.tipo,bv=b.tipo;else if(col==='descricao')av=a.descricao,bv=b.descricao;else if(col==='valor')av=a.valor,bv=b.valor;else av=a.ref,bv=b.ref;return av<bv?-dir:av>bv?dir:0;});
 
   if(!linhas.length){Toast.show('Nenhum dado para exportar','warn');return;}
 
-  /* Monta dados da planilha */
-  const cabecalho=[['Referência','Origem','Tipo','Descrição','Valor (R$)','Natureza']];
-  const dados=linhas.map(l=>[
-    Fmt.ref(l.ref),
-    l.origem||'',
-    l.tipo||'',
-    l.descricao||'',
-    l.valor,
-    l.natureza==='receita'?'Receita':'Despesa'
-  ]);
-  /* Linha de total */
-  const total=linhas.reduce((s,l)=>s+l.valor,0);
-  dados.push(['','','','TOTAL',total,'']);
+  /* Cabeçalho */
+  const wsData=[['Referência','Origem','Tipo','Descrição','Valor (R$)','Natureza']];
 
-  const wsData=[...cabecalho,...dados];
+  /* Linhas de dados — valor positivo para receita, negativo para despesa */
+  linhas.forEach(l=>{
+    const valorSinal=l.natureza==='receita'?l.valor:-l.valor;
+    wsData.push([Fmt.ref(l.ref), l.origem||'', l.tipo||'', l.descricao||'', valorSinal, l.natureza==='receita'?'Receita':'Despesa']);
+  });
+
+  /* Linha de saldo */
+  const saldo=linhas.reduce((s,l)=>s+(l.natureza==='receita'?l.valor:-l.valor),0);
+  wsData.push(['','','','SALDO',saldo,'']);
+
   const ws=XLSX.utils.aoa_to_sheet(wsData);
 
   /* Larguras das colunas */
-  ws['!cols']=[{wch:12},{wch:14},{wch:18},{wch:35},{wch:16},{wch:12}];
+  ws['!cols']=[{wch:12},{wch:14},{wch:20},{wch:36},{wch:16},{wch:12}];
 
-  /* Estilo da coluna de valor como número */
+  /* Formato numérico para coluna Valor */
   for(let i=1;i<wsData.length;i++){
-    const cell=ws[XLSX.utils.encode_cell({r:i,c:4})];
-    if(cell&&typeof cell.v==='number'){
-      cell.t='n';
-      cell.z='#,##0.00';
+    const cellRef=XLSX.utils.encode_cell({r:i,c:4});
+    if(ws[cellRef]&&typeof ws[cellRef].v==='number'){
+      ws[cellRef].t='n';
+      ws[cellRef].z='"R$" #,##0.00;[Red]"R$"-#,##0.00';
     }
   }
 
   const wb=XLSX.utils.book_new();
   const periodo=filtroRef?Fmt.ref(filtroRef):(filtroAno?filtroAno:'Todos');
-  XLSX.utils.book_append_sheet(wb,ws,`Consolidado ${periodo}`.slice(0,31));
+  const nomePlanilha=('Consolidado '+periodo).slice(0,31);
+  XLSX.utils.book_append_sheet(wb,ws,nomePlanilha);
 
-  const nomeArq=`FinPanel_Consolidado_${periodo.replace('/','_')}.xlsx`;
+  const nomeArq='FinPanel_Consolidado_'+periodo.replace('/','_')+'.xlsx';
   XLSX.writeFile(wb,nomeArq);
-  Toast.show(`Exportado: ${nomeArq}`,'success');
+  Toast.show('Exportado: '+nomeArq,'success');
 }
 
 /* ════════════════════════════════════════════
