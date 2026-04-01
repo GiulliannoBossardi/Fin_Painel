@@ -126,6 +126,9 @@ const DB = {
   }
 };
 
+
+/* ── Lê filtro de coluna (retorna '' se elemento não existe) ── */
+function cf(id){ const el=document.getElementById(id); return el?(el.value||'').toLowerCase().trim():''; }
 /* ════════════════════════════════════════════
    FMT
 ════════════════════════════════════════════ */
@@ -497,6 +500,11 @@ function renderSaidasTable(){
   const srch=document.getElementById('filterSaida').value.toLowerCase();
   let rows=expandirSaidas(DB.get('saidas')||[],filtroAno,filtroRef);
   if(srch)rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(srch)||(r.tipo||'').toLowerCase().includes(srch)||Fmt.ref(r.parcelaRef).toLowerCase().includes(srch));
+  const cfSRef=cf('cfSaidaRef'),cfSTipo=cf('cfSaidaTipo'),cfSDesc=cf('cfSaidaDesc'),cfSVal=cf('cfSaidaValor');
+  if(cfSRef)  rows=rows.filter(r=>Fmt.ref(r.parcelaRef).toLowerCase().includes(cfSRef));
+  if(cfSTipo) rows=rows.filter(r=>(r.tipo||'').toLowerCase().includes(cfSTipo));
+  if(cfSDesc) rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(cfSDesc));
+  if(cfSVal)  rows=rows.filter(r=>Fmt.brl(r.valorExib).toLowerCase().includes(cfSVal));
   const{col,dir}=saidaSortSt;
   rows.sort((a,b)=>{let av,bv;if(col==='ref')av=a.parcelaRef,bv=b.parcelaRef;else if(col==='tipo')av=a.tipo,bv=b.tipo;else if(col==='descricao')av=a.descricao,bv=b.descricao;else if(col==='valor')av=a.valor,bv=b.valor;else av=a.parcelaRef,bv=b.parcelaRef;return av<bv?-dir:av>bv?dir:0;});
   document.getElementById('saidaBadge').textContent=rows.length+' registro'+(rows.length!==1?'s':'');
@@ -521,7 +529,10 @@ function buildSaidaEditRow(r,tipos){
   const isParc=r.forma==='parcelado';
   const pago=(r.pagos||{})[r._parcelaIdx]||false;
   const sc=pago?'pago':'pendente',st=pago?'✔ Pago':'● Pendente';
-  return`<tr class="row-editing"><td class="td-ref">${Fmt.ref(r.parcelaRef)}</td><td><select class="inline-select" id="es_tipo" style="min-width:100px;">${tipoOpts}</select></td><td><input class="inline-input" id="es_desc" value="${(r.descricao||'').replace(/"/g,'&quot;')}" style="min-width:110px;" onkeydown="handleInlineSaidaKey(event,'${r.id}')"/></td><td class="td-mono">${r.parcelaNum!=null?`${r.parcelaNum}/${r.parcelaTotal}`:'—'}</td><td><div class="inline-curr"><span class="inline-curr-pfx">R$</span><input class="inline-input" id="es_val" value="${Fmt.toInput(r.valor)}" oninput="maskCurrency(this)" onkeydown="handleInlineSaidaKey(event,'${r.id}')" style="min-width:80px;"/></div></td><td><button class="status-btn ${sc}" onclick="toggleStatus('${r.id}','${r._parcelaIdx}')">${st}<span class="status-dot"></span></button></td><td><div class="actions-cell"><button class="btn-icon confirm" onclick="salvarSaida('${r.id}')">✔</button><button class="btn-icon cancel-edit" onclick="cancelarSaida()">✕</button></div></td></tr>`;
+  const parcelaCell=isParc
+    ?`<div style="display:flex;gap:4px;align-items:center;"><input class="inline-input" id="es_nparc" value="${r.nParcelas||1}" style="width:44px;text-align:center;" oninput="this.value=this.value.replace(/\\D/g,'')" onkeydown="handleInlineSaidaKey(event,'${r.id}')"/><span style="color:var(--text-muted);font-size:.75rem;">parc.</span></div>`
+    :'—';
+  return`<tr class="row-editing"><td class="td-ref">${Fmt.ref(r.parcelaRef)}</td><td><select class="inline-select" id="es_tipo" style="min-width:100px;">${tipoOpts}</select></td><td><input class="inline-input" id="es_desc" value="${(r.descricao||'').replace(/"/g,'&quot;')}" style="min-width:110px;" onkeydown="handleInlineSaidaKey(event,'${r.id}')"/></td><td class="td-mono">${parcelaCell}</td><td><div class="inline-curr"><span class="inline-curr-pfx">R$</span><input class="inline-input" id="es_val" value="${Fmt.toInput(r.valor)}" oninput="maskCurrency(this)" onkeydown="handleInlineSaidaKey(event,'${r.id}')" style="min-width:80px;"/></div></td><td><button class="status-btn ${sc}" onclick="toggleStatus('${r.id}','${r._parcelaIdx}')">${st}<span class="status-dot"></span></button></td><td><div class="actions-cell"><button class="btn-icon confirm" onclick="salvarSaida('${r.id}')">✔</button><button class="btn-icon cancel-edit" onclick="cancelarSaida()">✕</button></div></td></tr>`;
 }
 function iniciarEdicaoSaida(id){editingSaidaId=id;renderSaidasTable();setTimeout(()=>{const el=document.getElementById('es_desc');if(el)el.focus();},40);}
 function cancelarSaida(){editingSaidaId=null;renderSaidasTable();}
@@ -535,6 +546,8 @@ function salvarSaida(id){
   const idx=saidas.findIndex(s=>s.id===id);
   if(idx<0)return;
   saidas[idx].tipo=tipo;saidas[idx].descricao=descricao;saidas[idx].valor=valor;
+  const npEl=document.getElementById('es_nparc');
+  if(npEl){const np=parseInt(npEl.value)||1;if(np!==saidas[idx].nParcelas){saidas[idx].nParcelas=np;/* limpa pagos de parcelas excluídas */const pagos=saidas[idx].pagos||{};Object.keys(pagos).forEach(k=>{if(k!=='av'&&parseInt(k)>=np)delete pagos[k];});saidas[idx].pagos=pagos;}}
   DB.set('saidas',saidas);editingSaidaId=null;reconstruirFiltros();renderSaidasTable();atualizarStatsSaida();renderControle();
   Toast.show('Saída atualizada','success');
 }
@@ -613,6 +626,11 @@ function renderEntradasTable(){
   const srch=document.getElementById('filterEntrada').value.toLowerCase();
   let rows=expandirEntradas(DB.get('entradas')||[],filtroAno,filtroRef);
   if(srch)rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(srch)||(r.tipo||'').toLowerCase().includes(srch)||Fmt.ref(r.parcelaRef).toLowerCase().includes(srch));
+  const cfERef=cf('cfEntradaRef'),cfETipo=cf('cfEntradaTipo'),cfEDesc=cf('cfEntradaDesc'),cfEVal=cf('cfEntradaValor');
+  if(cfERef)  rows=rows.filter(r=>Fmt.ref(r.parcelaRef).toLowerCase().includes(cfERef));
+  if(cfETipo) rows=rows.filter(r=>(r.tipo||'').toLowerCase().includes(cfETipo));
+  if(cfEDesc) rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(cfEDesc));
+  if(cfEVal)  rows=rows.filter(r=>Fmt.brl(r.valorExib).toLowerCase().includes(cfEVal));
   const{col,dir}=entradaSortSt;
   rows.sort((a,b)=>{let av,bv;if(col==='ref')av=a.parcelaRef,bv=b.parcelaRef;else if(col==='tipo')av=a.tipo,bv=b.tipo;else if(col==='descricao')av=a.descricao,bv=b.descricao;else if(col==='valor')av=a.valor,bv=b.valor;else av=a.parcelaRef,bv=b.parcelaRef;return av<bv?-dir:av>bv?dir:0;});
   document.getElementById('entradaBadge').textContent=rows.length+' registro'+(rows.length!==1?'s':'');
@@ -636,7 +654,11 @@ function buildEntradaEditRow(r,tipos){
   const tipoOpts=tipos.map(t=>`<option value="${t}"${t===r.tipo?' selected':''}>${t}</option>`).join('');
   const pago=(r.pagos||{})[r._parcelaIdx]||false;
   const sc=pago?'pago':'pendente',st=pago?'✔ Recebido':'● Pendente';
-  return`<tr class="row-editing"><td class="td-ref">${Fmt.ref(r.parcelaRef)}</td><td><select class="inline-select" id="ee2_tipo" style="min-width:100px;">${tipoOpts}</select></td><td><input class="inline-input" id="ee2_desc" value="${(r.descricao||'').replace(/"/g,'&quot;')}" style="min-width:110px;" onkeydown="handleInlineEntradaKey(event,'${r.id}')"/></td><td class="td-mono">${r.parcelaNum!=null?`${r.parcelaNum}/${r.parcelaTotal}`:'—'}</td><td><div class="inline-curr"><span class="inline-curr-pfx">R$</span><input class="inline-input" id="ee2_val" value="${Fmt.toInput(r.valor)}" oninput="maskCurrency(this)" onkeydown="handleInlineEntradaKey(event,'${r.id}')" style="min-width:80px;"/></div></td><td><button class="status-btn ${sc}" onclick="toggleStatusEntrada('${r.id}','${r._parcelaIdx}')">${st}<span class="status-dot"></span></button></td><td><div class="actions-cell"><button class="btn-icon confirm" onclick="salvarEntrada('${r.id}')">✔</button><button class="btn-icon cancel-edit" onclick="cancelarEntrada()">✕</button></div></td></tr>`;
+  const isEParc=r.forma==='parcelado';
+  const parcelaCellE=isEParc
+    ?`<div style="display:flex;gap:4px;align-items:center;"><input class="inline-input" id="ee2_nparc" value="${r.nParcelas||1}" style="width:44px;text-align:center;" oninput="this.value=this.value.replace(/\\D/g,'')" onkeydown="handleInlineEntradaKey(event,'${r.id}')"/><span style="color:var(--text-muted);font-size:.75rem;">parc.</span></div>`
+    :'—';
+  return`<tr class="row-editing"><td class="td-ref">${Fmt.ref(r.parcelaRef)}</td><td><select class="inline-select" id="ee2_tipo" style="min-width:100px;">${tipoOpts}</select></td><td><input class="inline-input" id="ee2_desc" value="${(r.descricao||'').replace(/"/g,'&quot;')}" style="min-width:110px;" onkeydown="handleInlineEntradaKey(event,'${r.id}')"/></td><td class="td-mono">${parcelaCellE}</td><td><div class="inline-curr"><span class="inline-curr-pfx">R$</span><input class="inline-input" id="ee2_val" value="${Fmt.toInput(r.valor)}" oninput="maskCurrency(this)" onkeydown="handleInlineEntradaKey(event,'${r.id}')" style="min-width:80px;"/></div></td><td><button class="status-btn ${sc}" onclick="toggleStatusEntrada('${r.id}','${r._parcelaIdx}')">${st}<span class="status-dot"></span></button></td><td><div class="actions-cell"><button class="btn-icon confirm" onclick="salvarEntrada('${r.id}')">✔</button><button class="btn-icon cancel-edit" onclick="cancelarEntrada()">✕</button></div></td></tr>`;
 }
 function iniciarEdicaoEntrada(id){editingEntradaId=id;renderEntradasTable();setTimeout(()=>{const el=document.getElementById('ee2_desc');if(el)el.focus();},40);}
 function cancelarEntrada(){editingEntradaId=null;renderEntradasTable();}
@@ -645,6 +667,8 @@ function salvarEntrada(id){
   if(!descricao){Toast.show('Informe a descrição','error');return;}if(!valor){Toast.show('Informe o valor','error');return;}
   const entradas=DB.get('entradas')||[];const idx=entradas.findIndex(e=>e.id===id);if(idx<0)return;
   entradas[idx].tipo=tipo;entradas[idx].descricao=descricao;entradas[idx].valor=valor;
+  const npElE=document.getElementById('ee2_nparc');
+  if(npElE){const np=parseInt(npElE.value)||1;if(np!==entradas[idx].nParcelas){entradas[idx].nParcelas=np;const pagos=entradas[idx].pagos||{};Object.keys(pagos).forEach(k=>{if(k!=='av'&&parseInt(k)>=np)delete pagos[k];});entradas[idx].pagos=pagos;}}
   DB.set('entradas',entradas);editingEntradaId=null;reconstruirFiltros();renderEntradasTable();atualizarStatsEntrada();renderControle();Toast.show('Entrada atualizada','success');
 }
 function handleInlineEntradaKey(e,id){if(e.key==='Enter'){e.preventDefault();salvarEntrada(id);}if(e.key==='Escape')cancelarEntrada();}
@@ -712,17 +736,25 @@ function renderInvestTable(){
   const srch=(document.getElementById('filterInvest').value||'').toLowerCase();
   let rows=getInvestRows(filtroAno,filtroRef);
   if(srch)rows=rows.filter(r=>Fmt.ref(r.ref).toLowerCase().includes(srch)||(r.tipo||'').toLowerCase().includes(srch)||(r.descricao||'').toLowerCase().includes(srch)||(r.operacao||'aporte').toLowerCase().includes(srch));
+  const cfIRef=cf('cfInvestRef'),cfIOp=cf('cfInvestOp'),cfITipo=cf('cfInvestTipoF'),cfIDesc=cf('cfInvestDesc'),cfIVal=cf('cfInvestValor');
+  if(cfIRef)  rows=rows.filter(r=>Fmt.ref(r.ref).toLowerCase().includes(cfIRef));
+  if(cfIOp)   rows=rows.filter(r=>(r.operacao||'aporte').toLowerCase().includes(cfIOp));
+  if(cfITipo) rows=rows.filter(r=>(r.tipo||'').toLowerCase().includes(cfITipo));
+  if(cfIDesc) rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(cfIDesc));
+  if(cfIVal)  rows=rows.filter(r=>Fmt.brl(r.valor).toLowerCase().includes(cfIVal));
   const{col,dir}=investSortSt;
   rows.sort((a,b)=>{let av,bv;if(col==='ref')av=a.ref,bv=b.ref;else if(col==='tipo')av=a.tipo,bv=b.tipo;else if(col==='operacao')av=a.operacao||'aporte',bv=b.operacao||'aporte';else if(col==='descricao')av=a.descricao,bv=b.descricao;else if(col==='valor')av=a.valor,bv=b.valor;else av=a.ref,bv=b.ref;return av<bv?-dir:av>bv?dir:0;});
   document.getElementById('investBadge').textContent=rows.length+' registro'+(rows.length!==1?'s':'');
   atualizarStatsInvest();
   if(!rows.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="6">Nenhum registro encontrado.</td></tr>`;return;}
+  const tiposInvest=DB.get('tiposInvest')||[];
   tbody.innerHTML=rows.map(r=>{
+    if(r.id===editingInvestId)return buildInvestEditRow(r,tiposInvest);
     const op=r.operacao||'aporte';
     const isRetirada=op==='retirada';
     const opBadge=isRetirada?`<span class="nature-badge despesa">📉 Retirada</span>`:`<span class="nature-badge receita">📈 Aporte</span>`;
     const valClass=isRetirada?'td-value-expense':'td-value-invest';
-    return`<tr><td class="td-ref">${Fmt.ref(r.ref)}</td><td>${opBadge}</td><td><span class="td-tag">${r.tipo||'—'}</span></td><td style="font-size:.84rem;">${r.descricao||'—'}</td><td style="font-family:var(--font-mono);font-weight:500;" class="${valClass}">${isRetirada?'−':''}${Fmt.brl(r.valor)}</td><td><div class="actions-cell"><button class="btn-icon danger" onclick="pedirExcluirInvest('${r.id}')" title="Excluir">✕</button></div></td></tr>`;
+    return`<tr><td class="td-ref">${Fmt.ref(r.ref)}</td><td>${opBadge}</td><td><span class="td-tag">${r.tipo||'—'}</span></td><td style="font-size:.84rem;">${r.descricao||'—'}</td><td style="font-family:var(--font-mono);font-weight:500;" class="${valClass}">${isRetirada?'−':''}${Fmt.brl(r.valor)}</td><td><div class="actions-cell"><button class="btn-icon edit" onclick="iniciarEdicaoInvest('${r.id}')" title="Editar">✎</button><button class="btn-icon danger" onclick="pedirExcluirInvest('${r.id}')" title="Excluir">✕</button></div></td></tr>`;
   }).join('');
 }
 
@@ -759,6 +791,31 @@ function confirmarInsercaoInvest(){
   const label=operacao==='retirada'?'Retirada':'Aporte';
   Toast.show(`${label} de ${Fmt.brl(valor)} em ${tipo} registrado`,'success');
 }
+
+
+function buildInvestEditRow(r,tipos){
+  const tipoOpts=tipos.map(t=>`<option value="${t}"${t===r.tipo?' selected':''}>${t}</option>`).join('');
+  const opSel=`<select class="inline-select" id="ei_op" style="min-width:90px;"><option value="aporte"${(r.operacao||'aporte')==='aporte'?' selected':''}>Aporte</option><option value="retirada"${r.operacao==='retirada'?' selected':''}>Retirada</option></select>`;
+  return`<tr class="row-editing"><td><input type="month" class="inline-month" id="ei_ref" value="${r.ref}" onkeydown="handleInlineInvestKey(event,'${r.id}')"/></td><td>${opSel}</td><td><select class="inline-select" id="ei_tipo" style="min-width:90px;">${tipoOpts}</select></td><td><input class="inline-input" id="ei_desc" value="${(r.descricao||'').replace(/"/g,'&quot;')}" style="min-width:100px;" onkeydown="handleInlineInvestKey(event,'${r.id}')"/></td><td><div class="inline-curr"><span class="inline-curr-pfx">R$</span><input class="inline-input" id="ei_val" value="${Fmt.toInput(r.valor)}" oninput="maskCurrency(this)" onkeydown="handleInlineInvestKey(event,'${r.id}')" style="min-width:80px;"/></div></td><td><div class="actions-cell"><button class="btn-icon confirm" onclick="salvarInvest('${r.id}')">✔</button><button class="btn-icon cancel-edit" onclick="cancelarInvest()">✕</button></div></td></tr>`;
+}
+function iniciarEdicaoInvest(id){editingInvestId=id;renderInvestTable();setTimeout(()=>{const el=document.getElementById('ei_desc');if(el)el.focus();},40);}
+function cancelarInvest(){editingInvestId=null;renderInvestTable();}
+function salvarInvest(id){
+  const novaRef=document.getElementById('ei_ref').value;
+  const operacao=document.getElementById('ei_op').value;
+  const tipo=document.getElementById('ei_tipo').value;
+  const descricao=document.getElementById('ei_desc').value.trim();
+  const valor=Fmt.parse(document.getElementById('ei_val').value);
+  if(!novaRef){Toast.show('Informe a referência','error');return;}
+  if(!valor){Toast.show('Informe o valor','error');return;}
+  const inv=DB.get('investimentos')||[];
+  const idx=inv.findIndex(r=>r.id===id);
+  if(idx<0)return;
+  inv[idx]={...inv[idx],ref:novaRef,operacao,tipo,descricao,valor};
+  DB.set('investimentos',inv);editingInvestId=null;reconstruirFiltros();renderInvestTable();atualizarStatsInvest();renderControle();
+  Toast.show('Investimento atualizado','success');
+}
+function handleInlineInvestKey(e,id){if(e.key==='Enter'){e.preventDefault();salvarInvest(id);}if(e.key==='Escape')cancelarInvest();}
 
 let pendingDeleteInvestId=null;
 function pedirExcluirInvest(id){const r=(DB.get('investimentos')||[]).find(x=>x.id===id);if(!r)return;pendingDeleteInvestId=id;const op=r.operacao==='retirada'?'Retirada':'Aporte';document.getElementById('deleteInvestDesc').textContent=`${op}: ${r.tipo} — ${Fmt.brl(r.valor)} (${Fmt.ref(r.ref)})`;document.getElementById('modalExcluirInvest').classList.remove('hidden');}
@@ -824,6 +881,9 @@ function renderCtrlGrupo(tabela,grupos,grandTotal,natureza){
   const barClass=natureza==='receita'?'receita':'despesa';
   const valClass=natureza==='receita'?'td-value-income':'td-value-expense';
   grupos.sort((a,b)=>{const av=st.col==='tipo'?a.tipo:st.col==='registros'?a.registros:st.col==='perc'?(a.total/grandTotal):a.total;const bv=st.col==='tipo'?b.tipo:st.col==='registros'?b.registros:st.col==='perc'?(b.total/grandTotal):b.total;return av<bv?-st.dir:av>bv?st.dir:0;});
+  const cfTipoId=tabela==='receitas'?'cfReceitasTipo':'cfDespesasTipo';
+  const cfTipoVal=cf(cfTipoId);
+  if(cfTipoVal) grupos=grupos.filter(g=>(g.tipo||'').toLowerCase().includes(cfTipoVal));
   badgeEl.textContent=grupos.length+' tipo'+(grupos.length!==1?'s':'');
   if(!grupos.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="4">Nenhum registro no período.</td></tr>`;return;}
   const rows=grupos.map(g=>{const perc=grandTotal>0?(g.total/grandTotal*100):0;const barW=Math.round(perc*0.8);return`<tr><td style="font-size:.84rem;font-weight:500;">${g.tipo}</td><td class="td-mono" style="text-align:center;">${g.registros}</td><td class="${valClass}">${Fmt.brl(g.total)}</td><td><div class="perc-bar-wrap"><div class="perc-bar ${barClass}" style="width:${barW}px;"></div><span class="perc-val">${perc.toFixed(1)}%</span></div></td></tr>`;}).join('');
@@ -858,6 +918,11 @@ function renderCtrlTable(){
   const srch=(document.getElementById('filterCtrl').value||'').toLowerCase();
   let linhas=getLinhasCtrl(filtroAno,filtroRef);
   if(srch)linhas=linhas.filter(l=>Fmt.ref(l.ref).toLowerCase().includes(srch)||(l.origem||'').toLowerCase().includes(srch)||(l.tipo||'').toLowerCase().includes(srch)||(l.descricao||'').toLowerCase().includes(srch));
+  const cfCRef=cf('cfCtrlRef'),cfCOrig=cf('cfCtrlOrigem'),cfCTipo=cf('cfCtrlTipo'),cfCDesc=cf('cfCtrlDesc');
+  if(cfCRef)  linhas=linhas.filter(l=>Fmt.ref(l.ref).toLowerCase().includes(cfCRef));
+  if(cfCOrig) linhas=linhas.filter(l=>(l.origem||'').toLowerCase().includes(cfCOrig));
+  if(cfCTipo) linhas=linhas.filter(l=>(l.tipo||'').toLowerCase().includes(cfCTipo));
+  if(cfCDesc) linhas=linhas.filter(l=>(l.descricao||'').toLowerCase().includes(cfCDesc));
   const{col,dir}=ctrlMainSortSt;
   linhas.sort((a,b)=>{let av,bv;if(col==='ref')av=a.ref,bv=b.ref;else if(col==='origem')av=a.origem,bv=b.origem;else if(col==='tipo')av=a.tipo,bv=b.tipo;else if(col==='descricao')av=a.descricao,bv=b.descricao;else if(col==='valor')av=a.valor,bv=b.valor;else av=a.ref,bv=b.ref;return av<bv?-dir:av>bv?dir:0;});
   document.getElementById('ctrlTotalBadge').textContent=linhas.length+' registro'+(linhas.length!==1?'s':'');

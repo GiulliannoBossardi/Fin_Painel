@@ -599,3 +599,33 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     justify-content: center;
   }
 }
+
+/* ════════════════════════════════════════════
+   FILTROS POR COLUNA
+════════════════════════════════════════════ */
+.col-filter-row td {
+  padding: 4px 6px !important;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-strong) !important;
+  position: sticky;
+  top: 37px; /* fica logo abaixo do thead */
+  z-index: 1;
+}
+.col-filter-input {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: .72rem;
+  padding: 4px 7px;
+  border-radius: var(--radius-sm);
+  outline: none;
+  min-width: 50px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.col-filter-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+.col-filter-input::placeholder { color: var(--text-muted); opacity: .7; }
