@@ -893,7 +893,7 @@ function renderCtrlGrupo(tabela,grupos,grandTotal,natureza){
 
 function renderCtrlResumoOrigem(){
   const linhas=getLinhasCtrl(filtroAno,filtroRef);
-  const srch=(document.getElementById('filterCtrl')?document.getElementById('filterCtrl').value:'').toLowerCase();
+  const srch=(document.getElementById('filterResumo')?document.getElementById('filterResumo').value:'').toLowerCase();
   const resumo={};
   linhas.forEach(l=>{const t=l.tipo;if(!resumo[t])resumo[t]={tipo:t,entradas:0,saidas:0};if(l.natureza==='receita')resumo[t].entradas+=l.valor;else resumo[t].saidas+=l.valor;});
   let rows=Object.values(resumo);
@@ -915,9 +915,7 @@ function sortCtrlMain(col){if(ctrlMainSortSt.col===col)ctrlMainSortSt.dir*=-1;el
 
 function renderCtrlTable(){
   const tbody=document.getElementById('ctrlBody');
-  const srch=(document.getElementById('filterCtrl').value||'').toLowerCase();
   let linhas=getLinhasCtrl(filtroAno,filtroRef);
-  if(srch)linhas=linhas.filter(l=>Fmt.ref(l.ref).toLowerCase().includes(srch)||(l.origem||'').toLowerCase().includes(srch)||(l.tipo||'').toLowerCase().includes(srch)||(l.descricao||'').toLowerCase().includes(srch));
   const cfCRef=cf('cfCtrlRef'),cfCOrig=cf('cfCtrlOrigem'),cfCTipo=cf('cfCtrlTipo'),cfCDesc=cf('cfCtrlDesc');
   if(cfCRef)  linhas=linhas.filter(l=>Fmt.ref(l.ref).toLowerCase().includes(cfCRef));
   if(cfCOrig) linhas=linhas.filter(l=>(l.origem||'').toLowerCase().includes(cfCOrig));
@@ -926,9 +924,83 @@ function renderCtrlTable(){
   const{col,dir}=ctrlMainSortSt;
   linhas.sort((a,b)=>{let av,bv;if(col==='ref')av=a.ref,bv=b.ref;else if(col==='origem')av=a.origem,bv=b.origem;else if(col==='tipo')av=a.tipo,bv=b.tipo;else if(col==='descricao')av=a.descricao,bv=b.descricao;else if(col==='valor')av=a.valor,bv=b.valor;else av=a.ref,bv=b.ref;return av<bv?-dir:av>bv?dir:0;});
   document.getElementById('ctrlTotalBadge').textContent=linhas.length+' registro'+(linhas.length!==1?'s':'');
+  /* Soma de valor visível */
+  const totalValor=linhas.reduce((s,l)=>s+l.valor,0);
+  const totalEl=document.getElementById('ctrlTotalValor');
+  if(totalEl){
+    totalEl.textContent=Fmt.brl(totalValor);
+    totalEl.className=totalValor>=0?'td-value-income':'td-value-expense';
+  }
   if(!linhas.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="6">Nenhum dado no período selecionado.</td></tr>`;renderCtrlResumoOrigem();return;}
   tbody.innerHTML=linhas.map(l=>{const valClass=l.natureza==='receita'?'td-value-income':'td-value-expense';const naturezaBadge=l.natureza==='receita'?`<span class="nature-badge receita">↑ Receita</span>`:`<span class="nature-badge despesa">↓ Despesa</span>`;return`<tr><td class="td-ref">${Fmt.ref(l.ref)}</td><td><span class="origin-badge">${l.origem}</span></td><td><span class="td-tag">${l.tipo}</span></td><td style="font-size:.83rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.descricao}</td><td class="${valClass}">${Fmt.brl(l.valor)}</td><td>${naturezaBadge}</td></tr>`;}).join('');
   renderCtrlResumoOrigem();
+}
+
+
+/* ════════════════════════════════════════════
+   EXPORTAR CONSOLIDADO — XLSX
+════════════════════════════════════════════ */
+function exportarConsolidadoXlsx(){
+  /* Garante que a lib SheetJS está carregada */
+  if(typeof XLSX==='undefined'){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=_gerarXlsx;
+    document.head.appendChild(s);
+  } else {
+    _gerarXlsx();
+  }
+}
+
+function _gerarXlsx(){
+  /* Coleta linhas já filtradas (mesmo estado da tabela visível) */
+  let linhas=getLinhasCtrl(filtroAno,filtroRef);
+  const cfCRef=cf('cfCtrlRef'),cfCOrig=cf('cfCtrlOrigem'),cfCTipo=cf('cfCtrlTipo'),cfCDesc=cf('cfCtrlDesc');
+  if(cfCRef)  linhas=linhas.filter(l=>Fmt.ref(l.ref).toLowerCase().includes(cfCRef));
+  if(cfCOrig) linhas=linhas.filter(l=>(l.origem||'').toLowerCase().includes(cfCOrig));
+  if(cfCTipo) linhas=linhas.filter(l=>(l.tipo||'').toLowerCase().includes(cfCTipo));
+  if(cfCDesc) linhas=linhas.filter(l=>(l.descricao||'').toLowerCase().includes(cfCDesc));
+  const{col,dir}=ctrlMainSortSt;
+  linhas.sort((a,b)=>{let av,bv;if(col==='ref')av=a.ref,bv=b.ref;else if(col==='origem')av=a.origem,bv=b.origem;else if(col==='tipo')av=a.tipo,bv=b.tipo;else if(col==='descricao')av=a.descricao,bv=b.descricao;else if(col==='valor')av=a.valor,bv=b.valor;else av=a.ref,bv=b.ref;return av<bv?-dir:av>bv?dir:0;});
+
+  if(!linhas.length){Toast.show('Nenhum dado para exportar','warn');return;}
+
+  /* Monta dados da planilha */
+  const cabecalho=[['Referência','Origem','Tipo','Descrição','Valor (R$)','Natureza']];
+  const dados=linhas.map(l=>[
+    Fmt.ref(l.ref),
+    l.origem||'',
+    l.tipo||'',
+    l.descricao||'',
+    l.valor,
+    l.natureza==='receita'?'Receita':'Despesa'
+  ]);
+  /* Linha de total */
+  const total=linhas.reduce((s,l)=>s+l.valor,0);
+  dados.push(['','','','TOTAL',total,'']);
+
+  const wsData=[...cabecalho,...dados];
+  const ws=XLSX.utils.aoa_to_sheet(wsData);
+
+  /* Larguras das colunas */
+  ws['!cols']=[{wch:12},{wch:14},{wch:18},{wch:35},{wch:16},{wch:12}];
+
+  /* Estilo da coluna de valor como número */
+  for(let i=1;i<wsData.length;i++){
+    const cell=ws[XLSX.utils.encode_cell({r:i,c:4})];
+    if(cell&&typeof cell.v==='number'){
+      cell.t='n';
+      cell.z='#,##0.00';
+    }
+  }
+
+  const wb=XLSX.utils.book_new();
+  const periodo=filtroRef?Fmt.ref(filtroRef):(filtroAno?filtroAno:'Todos');
+  XLSX.utils.book_append_sheet(wb,ws,`Consolidado ${periodo}`.slice(0,31));
+
+  const nomeArq=`FinPanel_Consolidado_${periodo.replace('/','_')}.xlsx`;
+  XLSX.writeFile(wb,nomeArq);
+  Toast.show(`Exportado: ${nomeArq}`,'success');
 }
 
 /* ════════════════════════════════════════════
