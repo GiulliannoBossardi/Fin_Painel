@@ -460,3 +460,142 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   /* Colapso da sidebar - botão oculto no mobile */
   .sidebar-collapse-btn { display: none; }
 }
+
+/* ════════════════════════════════════════════
+   CORREÇÕES MOBILE — Tabelas e Botão Confirmar
+════════════════════════════════════════════ */
+
+/* ── Tabelas: scroll horizontal funcional em qualquer tela ── */
+@media (max-width: 768px) {
+  /* Container da tabela: scroll nativo e suave */
+  .table-wrap {
+    overflow-x: scroll;
+    overflow-y: auto;
+    max-height: none;        /* Remove limite de altura — deixa a página rolar */
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Indicador visual de que tem mais conteúdo à direita */
+  .card:has(.table-wrap) {
+    overflow: hidden;
+  }
+
+  /* Colunas td com texto que quebrava em várias linhas (tipo "Cartão de Crédito") */
+  .td-tag {
+    white-space: nowrap;
+    display: inline-block;
+  }
+
+  /* Coluna tipo não quebra mais */
+  tbody td, thead th {
+    white-space: nowrap;
+  }
+
+  /* Descrição pode quebrar para não esconder dados */
+  tbody td:nth-child(3) {
+    white-space: normal;
+    min-width: 100px;
+    max-width: 140px;
+  }
+
+  /* Cada tabela tem largura mínima para mostrar todas as colunas */
+  #salarioTable,
+  #extrasTable    { min-width: 480px; }
+  #saidasTable    { min-width: 560px; }
+  #entradasTable  { min-width: 560px; }
+  #investTable    { min-width: 520px; }
+  #ctrlTable      { min-width: 560px; }
+  #ctrlReceitasTable,
+  #ctrlDespesasTable { min-width: 380px; }
+  #ctrlResumoTable   { min-width: 380px; }
+
+  /* Remove o min-width genérico que causava overflow na página */
+  table { min-width: unset; }
+}
+
+/* ── Botão Confirmar: sempre visível no mobile ── */
+@media (max-width: 768px) {
+  /* botão confirmar fixo — ver bloco BOTÃO CONFIRMAR FIXO NO MOBILE abaixo */
+}
+
+/* ── Celular pequeno: ajustes adicionais ── */
+@media (max-width: 480px) {
+  .table-wrap {
+    margin: 0 -12px;         /* Sangra até a borda da tela */
+    border-radius: 0;
+    padding: 0;
+    width: calc(100% + 24px);
+  }
+
+  /* Cards sem padding lateral extra para dar mais espaço à tabela */
+  .card {
+    padding: 14px 12px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Cabeçalho do card empilha normalmente */
+  .card-header {
+    padding: 0 0 12px;
+  }
+
+  /* Grid de stats: 2 colunas mesmo no celular pequeno para stats de 3 */
+  .grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Stats menores */
+  .stat-card {
+    padding: 12px;
+  }
+  .stat-value {
+    font-size: .95rem;
+  }
+
+  /* Formulário de inserção com espaçamento menor */
+  .insert-panel {
+    padding: 14px 12px 80px;
+  }
+  .insert-panel-header {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+
+  /* Inputs full width sem cortar */
+  input[type="text"],
+  input[type="password"],
+  input[type="month"],
+  select {
+    font-size: .85rem;
+  }
+}
+
+/* ════════════════════════════════════════════
+   BOTÃO CONFIRMAR FIXO NO MOBILE
+════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Espaço reservado para o botão fixo não cobrir o conteúdo */
+  .insert-panel { padding-bottom: 76px !important; }
+
+  /* Wrapper do botão vira fixo na base da tela */
+  .btn-confirmar-wrap {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 400;
+    padding: 10px 16px 14px;
+    background: var(--bg-base);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -6px 24px rgba(0,0,0,.35);
+    margin: 0 !important;
+  }
+
+  .btn-confirmar {
+    width: 100% !important;
+    border-radius: var(--radius-sm) !important;
+    padding: 14px !important;
+    font-size: .95rem !important;
+    justify-content: center;
+  }
+}

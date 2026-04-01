@@ -139,7 +139,7 @@
                 <div class="form-group"><label>Valor Bruto</label><div class="currency-input-wrap"><span class="currency-prefix">R$</span><input type="text" id="extrasBruto" placeholder="0.000,00" oninput="maskCurrency(this)"/></div></div>
               </div>
             </div>
-            <div style="margin-top:18px;"><button class="btn btn-primary btn-full" onclick="confirmarInsercaoSalario()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmar</button></div>
+            <div class="btn-confirmar-wrap"><button class="btn btn-primary btn-full btn-confirmar" onclick="confirmarInsercaoSalario()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmar</button></div>
           </div>
         </div>
       </div>
@@ -197,7 +197,7 @@
                 <div class="form-group"><label>Mês/Ano da 1ª Parcela</label><input type="month" id="saidaPrimeiraParcela"/></div>
               </div>
             </div>
-            <div style="margin-top:18px;"><button class="btn btn-primary btn-full" onclick="confirmarInsercaoSaida()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmar Saída</button></div>
+            <div class="btn-confirmar-wrap"><button class="btn btn-primary btn-full btn-confirmar" onclick="confirmarInsercaoSaida()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmar Saída</button></div>
           </div>
         </div>
       </div>
@@ -254,7 +254,7 @@
                 <div class="form-group"><label>Mês/Ano da 1ª Parcela</label><input type="month" id="entradaPrimeiraParcela"/></div>
               </div>
             </div>
-            <div style="margin-top:18px;"><button class="btn btn-primary btn-full" onclick="confirmarInsercaoEntrada()" style="background:var(--income);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmar Entrada</button></div>
+            <div class="btn-confirmar-wrap"><button class="btn btn-primary btn-full btn-confirmar" onclick="confirmarInsercaoEntrada()" style="background:var(--income);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmar Entrada</button></div>
           </div>
         </div>
       </div>
@@ -415,7 +415,7 @@
               <div class="form-group"><label>Descrição</label><input type="text" id="investDescricao" placeholder="Ex: Tesouro Direto, Ação PETR4..."/></div>
               <div class="form-group"><label id="investValorLabel">Valor Aportado</label><div class="currency-input-wrap"><span class="currency-prefix">R$</span><input type="text" id="investValor" placeholder="0.000,00" oninput="maskCurrency(this)"/></div></div>
             </div>
-            <div style="margin-top:18px;"><button class="btn btn-primary btn-full" id="investBtnConfirmar" onclick="confirmarInsercaoInvest()" style="background:var(--invest);color:#fff;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span id="investBtnLabel">Confirmar Aporte</span></button></div>
+            <div class="btn-confirmar-wrap"><button class="btn btn-primary btn-full btn-confirmar" id="investBtnConfirmar" onclick="confirmarInsercaoInvest()" style="background:var(--invest);color:#fff;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span id="investBtnLabel">Confirmar Aporte</span></button></div>
           </div>
         </div>
       </div>
