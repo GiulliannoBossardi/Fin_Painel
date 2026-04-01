@@ -924,12 +924,15 @@ function renderCtrlTable(){
   const{col,dir}=ctrlMainSortSt;
   linhas.sort((a,b)=>{let av,bv;if(col==='ref')av=a.ref,bv=b.ref;else if(col==='origem')av=a.origem,bv=b.origem;else if(col==='tipo')av=a.tipo,bv=b.tipo;else if(col==='descricao')av=a.descricao,bv=b.descricao;else if(col==='valor')av=a.valor,bv=b.valor;else av=a.ref,bv=b.ref;return av<bv?-dir:av>bv?dir:0;});
   document.getElementById('ctrlTotalBadge').textContent=linhas.length+' registro'+(linhas.length!==1?'s':'');
-  /* Soma de valor visível */
-  const totalValor=linhas.reduce((s,l)=>s+l.valor,0);
+  /* Saldo visível: receitas somam positivo, despesas subtraem */
+  const saldoVisivel=linhas.reduce((s,l)=>s+(l.natureza==='receita'?l.valor:-l.valor),0);
   const totalEl=document.getElementById('ctrlTotalValor');
   if(totalEl){
-    totalEl.textContent=Fmt.brl(totalValor);
-    totalEl.className=totalValor>=0?'td-value-income':'td-value-expense';
+    const saldoStr=saldoVisivel>=0?Fmt.brl(saldoVisivel):`−${Fmt.brl(Math.abs(saldoVisivel))}`;
+    totalEl.textContent=saldoStr;
+    totalEl.className=saldoVisivel>=0?'td-value-income':'td-value-expense';
+    totalEl.style.fontFamily='var(--font-mono)';
+    totalEl.style.fontWeight='700';
   }
   if(!linhas.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="6">Nenhum dado no período selecionado.</td></tr>`;renderCtrlResumoOrigem();return;}
   tbody.innerHTML=linhas.map(l=>{const valClass=l.natureza==='receita'?'td-value-income':'td-value-expense';const naturezaBadge=l.natureza==='receita'?`<span class="nature-badge receita">↑ Receita</span>`:`<span class="nature-badge despesa">↓ Despesa</span>`;return`<tr><td class="td-ref">${Fmt.ref(l.ref)}</td><td><span class="origin-badge">${l.origem}</span></td><td><span class="td-tag">${l.tipo}</span></td><td style="font-size:.83rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.descricao}</td><td class="${valClass}">${Fmt.brl(l.valor)}</td><td>${naturezaBadge}</td></tr>`;}).join('');
