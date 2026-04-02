@@ -991,7 +991,7 @@ function exportarConsolidadoXlsx(){
 
   const wb=XLSX.utils.book_new();
   const periodo=filtroRef?Fmt.ref(filtroRef):(filtroAno?filtroAno:'Todos');
-  const nomePlanilha=('Consolidado '+periodo).slice(0,31);
+  const nomePlanilha=('Consolidado '+periodo).replace(/[:\\\/\?\*\[\]]/g,'-').slice(0,31);
   XLSX.utils.book_append_sheet(wb,ws,nomePlanilha);
 
   const nomeArq='FinPanel_Consolidado_'+periodo.replace('/','_')+'.xlsx';
