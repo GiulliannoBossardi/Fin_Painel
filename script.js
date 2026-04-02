@@ -1077,7 +1077,7 @@ function ocultarLoading() {
 /* ════════════════════════════════════════════
    SIDEBAR MOBILE
 ════════════════════════════════════════════ */
-function isMobile() { return window.innerWidth <= 768; }
+function isMobile() { return window.innerWidth <= 900; }
 
 function toggleMobileSidebar() {
   const sb = document.getElementById('sidebar');
