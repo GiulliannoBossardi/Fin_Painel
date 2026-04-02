@@ -2,7 +2,7 @@
 [data-theme="dark"]{--bg-base:#0D0F14;--bg-surface:#13161E;--bg-elevated:#1A1E28;--bg-overlay:#222738;--border:rgba(255,255,255,.07);--border-strong:rgba(255,255,255,.14);--text-primary:#FFFFFF;--text-secondary:#E4E7F5;--text-muted:#BCC1D8;--shadow:0 4px 24px rgba(0,0,0,.5);--shadow-lg:0 8px 48px rgba(0,0,0,.7);--sidebar-bg:#0D0F14;--input-bg:#1A1E28;--scrollbar-thumb:#2A2F40;}
 [data-theme="light"]{--bg-base:#F4F5FA;--bg-surface:#FFFFFF;--bg-elevated:#FAFBFF;--bg-overlay:#EEF0FA;--border:rgba(0,0,0,.08);--border-strong:rgba(0,0,0,.15);--text-primary:#05060F;--text-secondary:#1A1D30;--text-muted:#3A3F5C;--shadow:0 2px 16px rgba(0,0,0,.08);--shadow-lg:0 8px 40px rgba(0,0,0,.12);--sidebar-bg:#0D0F1A;--input-bg:#F0F2FA;--scrollbar-thumb:#CBD0E8;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}html{font-size:15px;}
-body{font-family:var(--font-body);background:var(--bg-base);color:var(--text-primary);height:100vh;display:flex;overflow:hidden;transition:background var(--transition),color var(--transition);}
+body{font-family:var(--font-body);background:var(--bg-base);color:var(--text-primary);height:100%;min-height:100vh;display:flex;overflow:hidden;transition:background var(--transition),color var(--transition);}
 ::-webkit-scrollbar{width:5px;height:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:99px;}
 
 /* ── LOGIN ── */
@@ -308,45 +308,44 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 
 /* ════════════════════════════════════════════
    RESPONSIVO COMPLETO
-   Desktop  : > 900px
-   Mobile   : ≤ 900px  (inclui celulares 6.4"+)
 ════════════════════════════════════════════ */
 
-/* ══ Desktop: espaçamento do botão confirmar ══ */
+/* Desktop: botão confirmar com espaço */
 .btn-confirmar-wrap { margin-top: 20px; }
 
-/* ════════════════════════════════════════════
-   MOBILE (≤ 900px)
-   Celular 6.4" = ~390px CSS width
-════════════════════════════════════════════ */
 @media (max-width: 900px) {
 
-  /* ── Muda o modelo de scroll: página inteira rola ── */
-  body {
-    height: auto !important;
-    overflow: auto !important;
-    overflow-x: hidden !important;
+  /* ── Modelo de layout: página rola normalmente ── */
+  html, body {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
-  #appWrapper {
-    height: auto !important;
-    min-height: 100vh;
-    overflow: visible !important;
-    flex-direction: column;
-  }
-  .main {
-    height: auto !important;
-    overflow: visible !important;
-    overflow-x: hidden !important;
-    min-height: 0;
-  }
-  .content-area { overflow: visible !important; }
+  body { flex-direction: column; }
 
-  /* ── Sidebar: overlay lateral ── */
+  #appWrapper {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .main {
+    height: auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: visible;
+    flex: none;
+    width: 100%;
+  }
+
+  /* ── Sidebar: overlay fixo ── */
   .sidebar {
-    position: fixed !important;
+    position: fixed;
     left: -280px;
     top: 0;
-    height: 100% !important;
+    height: 100vh;
     width: 260px !important;
     z-index: 500;
     overflow-y: auto;
@@ -356,22 +355,24 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     left: 0;
     box-shadow: 8px 0 40px rgba(0,0,0,.6);
   }
+  .sidebar.collapsed { width: 260px !important; }
+
   .sidebar-backdrop {
     display: none;
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,.55);
     z-index: 499;
-    backdrop-filter: blur(2px);
   }
   .sidebar-backdrop.visible { display: block; }
 
-  /* ── Topbar: fica no topo mas não é sticky ── */
+  /* ── Topbar ── */
   .topbar {
-    padding: 12px 16px;
     position: sticky;
     top: 0;
     z-index: 100;
+    padding: 12px 14px;
+    flex-shrink: 0;
   }
   .topbar-date { display: none; }
   .hamburger-btn {
@@ -387,34 +388,34 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     flex-shrink: 0;
   }
 
-  /* ── Layout geral ── */
+  /* ── Grids e conteúdo ── */
   .content-area { padding: 12px; }
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr !important; }
-  .form-grid { grid-template-columns: 1fr !important; }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .form-grid { grid-template-columns: 1fr; }
   .field-row-2 { grid-template-columns: 1fr 1fr; }
 
-  /* ── Stats ── */
-  .grid-3.mb-20, .grid-4.mb-20 { grid-template-columns: 1fr 1fr !important; }
+  /* Stats: 2 colunas */
+  .grid-3 { grid-template-columns: 1fr 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+
   .stat-value { font-size: 1rem; }
   .stat-label { font-size: .68rem; }
   .stat-card { padding: 12px 14px; }
 
-  /* ── Cards ── */
-  .card { padding: 14px; }
+  /* Cards */
+  .card { padding: 14px; overflow: visible; }
   .card-header { flex-wrap: wrap; gap: 8px; }
 
-  /* ── Painel de inserção ──
-     Vai abaixo da tabela, ocupa 100%, sem corte ── */
+  /* Painel de inserção */
   .insert-panel {
     position: static !important;
     width: 100% !important;
-    align-self: auto !important;
     margin-top: 16px;
     padding: 16px !important;
     box-sizing: border-box;
   }
 
-  /* ── Botão Confirmar: no fluxo, 100% largura ── */
+  /* Botão confirmar */
   .btn-confirmar-wrap {
     position: static !important;
     margin-top: 16px !important;
@@ -422,107 +423,92 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    width: 100%;
   }
   .btn-confirmar {
     width: 100% !important;
     justify-content: center !important;
-    padding: 14px 20px !important;
+    padding: 14px !important;
     font-size: .95rem !important;
     border-radius: var(--radius-sm) !important;
-    margin: 0 !important;
   }
 
   /* ════════════════════════════════════════
-     TABELAS — scroll horizontal real
-     A chave: wrapper com largura FIXA e overflow-x:auto
+     TABELAS — scroll horizontal obrigatório
   ════════════════════════════════════════ */
+
+  /* O card não pode clipar o conteúdo */
+  .card { overflow: visible !important; }
+
+  /* Wrapper: bloco com scroll horizontal */
   .table-wrap {
-    display: block !important;
-    width: 100% !important;
-    overflow-x: auto !important;
-    overflow-y: visible !important;
-    -webkit-overflow-scrolling: touch !important;
-    max-height: none !important;
-    /* Barra de scroll sempre visível no mobile */
+    display: block;
+    width: 100%;
+    overflow-x: scroll;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    max-height: none;
+    /* Barra visível */
     scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
+    scrollbar-color: var(--accent) transparent;
   }
-  .table-wrap::-webkit-scrollbar { height: 4px; }
+  .table-wrap::-webkit-scrollbar { height: 5px; }
+  .table-wrap::-webkit-scrollbar-track { background: transparent; }
   .table-wrap::-webkit-scrollbar-thumb {
     background: var(--accent);
     border-radius: 99px;
   }
 
-  /* Tabela interna: não encolhe, força scroll */
-  .table-wrap table {
-    display: table !important;
-    width: max-content !important;
+  /* Tabela não encolhe — força scroll */
+  .table-wrap > table {
+    width: max-content;
     min-width: 100%;
     table-layout: auto;
   }
 
-  /* Tamanhos mínimos por tabela */
-  #salarioTable  { min-width: 500px !important; }
-  #extrasTable   { min-width: 400px !important; }
-  #saidasTable   { min-width: 560px !important; }
-  #entradasTable { min-width: 560px !important; }
-  #investTable   { min-width: 500px !important; }
-  #ctrlTable     { min-width: 540px !important; }
+  /* Larguras mínimas garantidas */
+  #salarioTable  { min-width: 500px; }
+  #extrasTable   { min-width: 400px; }
+  #saidasTable   { min-width: 560px; }
+  #entradasTable { min-width: 560px; }
+  #investTable   { min-width: 500px; }
+  #ctrlTable     { min-width: 540px; }
   #ctrlReceitasTable,
   #ctrlDespesasTable,
-  #ctrlResumoTable { min-width: 340px !important; }
+  #ctrlResumoTable { min-width: 320px; }
 
-  /* Células não quebram linha */
-  tbody td, thead th { white-space: nowrap !important; }
-  .td-tag { white-space: nowrap !important; }
-  /* Descrição pode quebrar */
-  tbody td:nth-child(3) {
-    white-space: normal !important;
-    min-width: 100px;
-    max-width: 150px;
-  }
+  /* Células: sem quebra de linha */
+  tbody td, thead th { white-space: nowrap; }
+  .td-tag { white-space: nowrap; }
+  tbody td:nth-child(3) { white-space: normal; min-width: 100px; max-width: 150px; }
 
-  /* ── Sub-tabs ── */
+  /* Outros */
   .sub-tabs { overflow-x: auto; flex-wrap: nowrap; }
   .sub-tab { white-space: nowrap; flex-shrink: 0; padding: 6px 12px; font-size: .8rem; }
-
-  /* ── Filtros ── */
   .filter-bar { padding: 10px 12px; gap: 8px; flex-wrap: wrap; }
   .filter-sep { display: none; }
+  .sidebar-collapse-btn { display: none; }
 
-  /* ── Modal ── */
+  /* Modal bottom-sheet */
   .modal-overlay { padding: 0; align-items: flex-end; }
   .modal {
-    border-radius: 18px 18px 0 0;
+    border-radius: 16px 16px 0 0;
     max-width: 100%; width: 100%;
     padding: 22px 16px 28px;
     animation: modalUp .22s ease;
   }
   @keyframes modalUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-  /* ── Toast ── */
   .toast { max-width: calc(100vw - 24px); font-size: .8rem; }
   .toast-container { right: 10px; bottom: 10px; }
-
-  /* ── Sidebar collapse hidden ── */
-  .sidebar-collapse-btn { display: none !important; }
 }
 
-/* ════════════════════════════════════════════
-   CELULAR PEQUENO (≤ 400px)
-════════════════════════════════════════════ */
+/* Celular pequeno */
 @media (max-width: 400px) {
   .content-area { padding: 8px; }
   .card { padding: 10px; }
   .insert-panel { padding: 12px !important; }
-  .stat-card { padding: 10px; }
-  .stat-value { font-size: .88rem; }
-  input[type="text"], input[type="password"], input[type="month"], select {
-    font-size: .83rem; padding: 8px 10px;
-  }
-  .btn { padding: 8px 12px; font-size: .8rem; }
-  .btn-confirmar { padding: 13px !important; }
+  .stat-value { font-size: .85rem; }
+  .field-row-2 { grid-template-columns: 1fr; }
 }
 
 /* ════════════════════════════════════════════
