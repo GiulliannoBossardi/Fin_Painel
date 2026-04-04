@@ -511,26 +511,11 @@ function renderSaidasTable(){
   atualizarStatsSaida();
   if(!rows.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="7">Nenhuma saída registrada.</td></tr>`;return;}
   const tipos=DB.get('tiposConta')||[];
-  /* Agrupa por Tipo para exibir linha de toggle por grupo */
-  const grupos={};
-  rows.forEach(r=>{const t=r.tipo||'—';if(!grupos[t])grupos[t]=[];grupos[t].push(r);});
-  const html=[];
-  Object.keys(grupos).sort().forEach(tipo=>{
-    const gr=grupos[tipo];
-    const total=gr.reduce((s,r)=>s+r.valorExib,0);
-    const pagos=gr.filter(r=>{const k=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);return (r.pagos||{})[k];});
-    const todosPagos=pagos.length===gr.length;
-    const algumPago=pagos.length>0;
-    const stGrupo=todosPagos?'pago':algumPago?'parcial':'pendente';
-    const labelGrupo=todosPagos?'✔ Todos Pagos':algumPago?`✔ ${pagos.length}/${gr.length} Pagos`:'● Todos Pendentes';
-    html.push(`<tr class="grupo-tipo-row"><td colspan="2"><span class="td-tag" style="font-size:.75rem;">${tipo}</span></td><td colspan="2" style="font-size:.76rem;color:var(--text-muted);">${gr.length} lançamento${gr.length!==1?'s':''} · ${Fmt.brl(total)}</td><td></td><td><button class="status-btn status-grupo ${stGrupo}" onclick="toggleStatusPorTipo('saida','${tipo.replace(/'/g,"\'")}',${todosPagos})">${labelGrupo}<span class="status-dot"></span></button></td><td></td></tr>`);
-    gr.forEach(r=>{
-      if(r.id===editingSaidaId&&(r.parcelaNum===1||r.parcelaNum===null))html.push(buildSaidaEditRow(r,tipos));
-      else if(r.id===editingSaidaId)html.push(buildSaidaReadRow(r,true));
-      else html.push(buildSaidaReadRow(r,false));
-    });
-  });
-  tbody.innerHTML=html.join('');
+  tbody.innerHTML=rows.map(r=>{
+    if(r.id===editingSaidaId&&(r.parcelaNum===1||r.parcelaNum===null))return buildSaidaEditRow(r,tipos);
+    if(r.id===editingSaidaId)return buildSaidaReadRow(r,true);
+    return buildSaidaReadRow(r,false);
+  }).join('');
 }
 function buildSaidaReadRow(r,inEdit){
   const parcelaStr=r.parcelaNum!=null?`${r.parcelaNum}/${r.parcelaTotal}`:'—';
@@ -567,43 +552,6 @@ function salvarSaida(id){
   Toast.show('Saída atualizada','success');
 }
 function handleInlineSaidaKey(e,id){if(e.key==='Enter'){e.preventDefault();salvarSaida(id);}if(e.key==='Escape')cancelarSaida();}
-
-
-/* ════════════════════════════════════════════
-   TOGGLE STATUS POR TIPO (Saídas e Entradas)
-   Marca/desmarca todas as parcelas visíveis
-   do mesmo Tipo de uma só vez.
-════════════════════════════════════════════ */
-function toggleStatusPorTipo(aba, tipo, todosPagos){
-  const novoEstado = !todosPagos; /* inverte: se todos pagos → marca pendente; senão → marca pago */
-  if(aba==='saida'){
-    const saidas=DB.get('saidas')||[];
-    const rows=expandirSaidas(saidas,filtroAno,filtroRef).filter(r=>(r.tipo||'—')===tipo);
-    rows.forEach(r=>{
-      const idx=saidas.findIndex(s=>s.id===r.id);
-      if(idx<0)return;
-      if(!saidas[idx].pagos)saidas[idx].pagos={};
-      const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);
-      saidas[idx].pagos[key]=novoEstado;
-    });
-    DB.set('saidas',saidas);
-    renderSaidasTable();atualizarStatsSaida();
-    Toast.show(`${tipo}: ${novoEstado?'todos pagos':'todos pendentes'}`,'info');
-  } else {
-    const entradas=DB.get('entradas')||[];
-    const rows=expandirEntradas(entradas,filtroAno,filtroRef).filter(r=>(r.tipo||'—')===tipo);
-    rows.forEach(r=>{
-      const idx=entradas.findIndex(e=>e.id===r.id);
-      if(idx<0)return;
-      if(!entradas[idx].pagos)entradas[idx].pagos={};
-      const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);
-      entradas[idx].pagos[key]=novoEstado;
-    });
-    DB.set('entradas',entradas);
-    renderEntradasTable();atualizarStatsEntrada();
-    Toast.show(`${tipo}: ${novoEstado?'todos recebidos':'todos pendentes'}`,'info');
-  }
-}
 
 function toggleStatus(id,parcelaIdx){
   const saidas=DB.get('saidas')||[];const idx=saidas.findIndex(s=>s.id===id);if(idx<0)return;
@@ -689,26 +637,11 @@ function renderEntradasTable(){
   atualizarStatsEntrada();
   if(!rows.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="7">Nenhuma entrada registrada.</td></tr>`;return;}
   const tipos=DB.get('tiposConta')||[];
-  /* Agrupa por Tipo para exibir linha de toggle por grupo */
-  const grupos={};
-  rows.forEach(r=>{const t=r.tipo||'—';if(!grupos[t])grupos[t]=[];grupos[t].push(r);});
-  const html=[];
-  Object.keys(grupos).sort().forEach(tipo=>{
-    const gr=grupos[tipo];
-    const total=gr.reduce((s,r)=>s+r.valorExib,0);
-    const pagos=gr.filter(r=>{const k=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);return (r.pagos||{})[k];});
-    const todosPagos=pagos.length===gr.length;
-    const algumPago=pagos.length>0;
-    const stGrupo=todosPagos?'pago':algumPago?'parcial':'pendente';
-    const labelGrupo=todosPagos?'✔ Todos Recebidos':algumPago?`✔ ${pagos.length}/${gr.length} Recebidos`:'● Todos Pendentes';
-    html.push(`<tr class="grupo-tipo-row"><td colspan="2"><span class="td-tag" style="font-size:.75rem;">${tipo}</span></td><td colspan="2" style="font-size:.76rem;color:var(--text-muted);">${gr.length} lançamento${gr.length!==1?'s':''} · ${Fmt.brl(total)}</td><td></td><td><button class="status-btn status-grupo ${stGrupo}" onclick="toggleStatusPorTipo('entrada','${tipo.replace(/'/g,"\'")}',${todosPagos})">${labelGrupo}<span class="status-dot"></span></button></td><td></td></tr>`);
-    gr.forEach(r=>{
-      if(r.id===editingEntradaId&&(r.parcelaNum===1||r.parcelaNum===null))html.push(buildEntradaEditRow(r,tipos));
-      else if(r.id===editingEntradaId)html.push(buildEntradaReadRow(r,true));
-      else html.push(buildEntradaReadRow(r,false));
-    });
-  });
-  tbody.innerHTML=html.join('');
+  tbody.innerHTML=rows.map(r=>{
+    if(r.id===editingEntradaId&&(r.parcelaNum===1||r.parcelaNum===null))return buildEntradaEditRow(r,tipos);
+    if(r.id===editingEntradaId)return buildEntradaReadRow(r,true);
+    return buildEntradaReadRow(r,false);
+  }).join('');
 }
 function buildEntradaReadRow(r,inEdit){
   const parcelaStr=r.parcelaNum!=null?`${r.parcelaNum}/${r.parcelaTotal}`:'—';
