@@ -830,14 +830,14 @@ const ctrlMainSortSt={col:'ref',dir:1};
 function getLinhasCtrl(ano,ref){
   const linhas=[];
   const salRows=getSalRows(ano,ref);
-  salRows.forEach(r=>{if(r.liquido>0)linhas.push({ref:r.ref,origem:'Salário',tipo:'Salário Líquido',descricao:'Adiantamento + Pagamento',valor:r.liquido,natureza:'receita'});});
+  salRows.forEach(r=>{if(r.liquido>0)linhas.push({ref:r.ref,origem:'Salário',tipo:'Salário Líquido',descricao:'Adiantamento + Pagamento',parcela:'—',valor:r.liquido,natureza:'receita'});});
   let extras=DB.get('extras')||[];
   if(ref)extras=extras.filter(e=>e.ref===ref);else if(ano)extras=extras.filter(e=>e.ref.startsWith(ano+'-'));
-  extras.forEach(e=>{if((e.liquido||0)>0)linhas.push({ref:e.ref,origem:'Salário',tipo:e.tipo,descricao:'Extra — '+e.tipo,valor:e.liquido||0,natureza:'receita'});});
+  extras.forEach(e=>{if((e.liquido||0)>0)linhas.push({ref:e.ref,origem:'Salário',tipo:e.tipo,descricao:'Extra — '+e.tipo,parcela:'—',valor:e.liquido||0,natureza:'receita'});});
   const entRows=expandirEntradas(DB.get('entradas')||[],ano,ref);
-  entRows.forEach(r=>{linhas.push({ref:r.parcelaRef,origem:'Entradas',tipo:r.tipo||'Entrada',descricao:r.descricao||(r.tipo||'Entrada'),valor:r.valorExib,natureza:'receita'});});
+  entRows.forEach(r=>{const parc=r.parcelaNum!=null?`${r.parcelaNum}/${r.parcelaTotal}`:'—';linhas.push({ref:r.parcelaRef,origem:'Entradas',tipo:r.tipo||'Entrada',descricao:r.descricao||(r.tipo||'Entrada'),parcela:parc,valor:r.valorExib,natureza:'receita'});});
   const saiRows=expandirSaidas(DB.get('saidas')||[],ano,ref);
-  saiRows.forEach(r=>{linhas.push({ref:r.parcelaRef,origem:'Saídas',tipo:r.tipo||'Saída',descricao:r.descricao||(r.tipo||'Saída'),valor:r.valorExib,natureza:'despesa'});});
+  saiRows.forEach(r=>{const parc=r.parcelaNum!=null?`${r.parcelaNum}/${r.parcelaTotal}`:'—';linhas.push({ref:r.parcelaRef,origem:'Saídas',tipo:r.tipo||'Saída',descricao:r.descricao||(r.tipo||'Saída'),parcela:parc,valor:r.valorExib,natureza:'despesa'});});
   return linhas;
 }
 
@@ -934,8 +934,8 @@ function renderCtrlTable(){
     totalEl.style.fontFamily='var(--font-mono)';
     totalEl.style.fontWeight='700';
   }
-  if(!linhas.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="6">Nenhum dado no período selecionado.</td></tr>`;renderCtrlResumoOrigem();return;}
-  tbody.innerHTML=linhas.map(l=>{const valClass=l.natureza==='receita'?'td-value-income':'td-value-expense';const naturezaBadge=l.natureza==='receita'?`<span class="nature-badge receita">↑ Receita</span>`:`<span class="nature-badge despesa">↓ Despesa</span>`;return`<tr><td class="td-ref">${Fmt.ref(l.ref)}</td><td><span class="origin-badge">${l.origem}</span></td><td><span class="td-tag">${l.tipo}</span></td><td style="font-size:.83rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.descricao}</td><td class="${valClass}">${Fmt.brl(l.valor)}</td><td>${naturezaBadge}</td></tr>`;}).join('');
+  if(!linhas.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="7">Nenhum dado no período selecionado.</td></tr>`;renderCtrlResumoOrigem();return;}
+  tbody.innerHTML=linhas.map(l=>{const valClass=l.natureza==='receita'?'td-value-income':'td-value-expense';const naturezaBadge=l.natureza==='receita'?`<span class="nature-badge receita">↑ Receita</span>`:`<span class="nature-badge despesa">↓ Despesa</span>`;return`<tr><td class="td-ref">${Fmt.ref(l.ref)}</td><td><span class="origin-badge">${l.origem}</span></td><td><span class="td-tag">${l.tipo}</span></td><td style="font-size:.83rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${l.descricao}</td><td class="td-mono" style="text-align:center;">${l.parcela||'—'}</td><td class="${valClass}">${Fmt.brl(l.valor)}</td><td>${naturezaBadge}</td></tr>`;}).join('');
   renderCtrlResumoOrigem();
 }
 
@@ -963,12 +963,12 @@ function exportarConsolidadoXlsx(){
   if(!linhas.length){Toast.show('Nenhum dado para exportar','warn');return;}
 
   /* Cabeçalho */
-  const wsData=[['Referência','Origem','Tipo','Descrição','Valor (R$)','Natureza']];
+  const wsData=[['Referência','Origem','Tipo','Descrição','Parcela','Valor (R$)','Natureza']];
 
   /* Linhas de dados — valor positivo para receita, negativo para despesa */
   linhas.forEach(l=>{
     const valorSinal=l.natureza==='receita'?l.valor:-l.valor;
-    wsData.push([Fmt.ref(l.ref), l.origem||'', l.tipo||'', l.descricao||'', valorSinal, l.natureza==='receita'?'Receita':'Despesa']);
+    wsData.push([Fmt.ref(l.ref), l.origem||'', l.tipo||'', l.descricao||'', l.parcela||'—', valorSinal, l.natureza==='receita'?'Receita':'Despesa']);
   });
 
   /* Linha de saldo */
@@ -978,11 +978,11 @@ function exportarConsolidadoXlsx(){
   const ws=XLSX.utils.aoa_to_sheet(wsData);
 
   /* Larguras das colunas */
-  ws['!cols']=[{wch:12},{wch:14},{wch:20},{wch:36},{wch:16},{wch:12}];
+  ws['!cols']=[{wch:12},{wch:14},{wch:20},{wch:36},{wch:10},{wch:16},{wch:12}];
 
   /* Formato numérico para coluna Valor */
   for(let i=1;i<wsData.length;i++){
-    const cellRef=XLSX.utils.encode_cell({r:i,c:4});
+    const cellRef=XLSX.utils.encode_cell({r:i,c:5});
     if(ws[cellRef]&&typeof ws[cellRef].v==='number'){
       ws[cellRef].t='n';
       ws[cellRef].z='"R$" #,##0.00;[Red]"R$"-#,##0.00';

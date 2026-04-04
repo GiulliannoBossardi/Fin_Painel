@@ -395,17 +395,18 @@
                 <th onclick="sortCtrlMain('origem')" data-col="origem">Origem <span class="sort-icon">↕</span></th>
                 <th onclick="sortCtrlMain('tipo')" data-col="tipo">Tipo <span class="sort-icon">↕</span></th>
                 <th onclick="sortCtrlMain('descricao')" data-col="descricao">Descrição <span class="sort-icon">↕</span></th>
+                <th class="no-sort" style="text-align:center;">Parcela</th>
                 <th onclick="sortCtrlMain('valor')" data-col="valor">Valor <span class="sort-icon">↕</span></th>
                 <th class="no-sort">Natureza</th>
               </tr></thead>
-              <tfoot id="ctrlFoot"><tr class="ctrl-total-row"><td colspan="4" style="font-size:.82rem;text-align:right;padding-right:14px;">Saldo visível</td><td id="ctrlTotalValor" class="td-value-income" style="font-family:var(--font-mono);font-weight:700;">R$ 0,00</td><td></td></tr></tfoot>
+              <tfoot id="ctrlFoot"><tr class="ctrl-total-row"><td colspan="5" style="font-size:.82rem;text-align:right;padding-right:14px;">Saldo visível</td><td id="ctrlTotalValor" class="td-value-income" style="font-family:var(--font-mono);font-weight:700;">R$ 0,00</td><td></td></tr></tfoot>
               <tbody id="ctrlColFilter">
                   <tr class="col-filter-row">
                     <td><input class="col-filter-input" id="cfCtrlRef"    placeholder="Ref..."    oninput="renderCtrlTable()"/></td>
                     <td><input class="col-filter-input" id="cfCtrlOrigem" placeholder="Origem..." oninput="renderCtrlTable()"/></td>
                     <td><input class="col-filter-input" id="cfCtrlTipo"   placeholder="Tipo..."   oninput="renderCtrlTable()"/></td>
                     <td><input class="col-filter-input" id="cfCtrlDesc"   placeholder="Desc..."   oninput="renderCtrlTable()"/></td>
-                    <td></td><td></td>
+                    <td></td><td></td><td></td>
                   </tr>
                 </tbody>
                 <tbody id="ctrlBody"></tbody>
