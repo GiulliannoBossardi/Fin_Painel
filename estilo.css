@@ -471,7 +471,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   #saidasTable   { min-width: 560px; }
   #entradasTable { min-width: 560px; }
   #investTable   { min-width: 500px; }
-  #ctrlTable     { min-width: 540px; }
+  #ctrlTable     { min-width: 620px; }
   #ctrlReceitasTable,
   #ctrlDespesasTable,
   #ctrlResumoTable { min-width: 320px; }
@@ -540,3 +540,32 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   box-shadow: 0 0 0 2px var(--accent-dim);
 }
 .col-filter-input::placeholder { color: var(--text-muted); opacity: .7; }
+
+/* ════════════════════════════════════════════
+   LINHA DE GRUPO POR TIPO (Saídas / Entradas)
+════════════════════════════════════════════ */
+.grupo-tipo-row {
+  background: var(--bg-elevated) !important;
+  border-top: 2px solid var(--border-strong) !important;
+}
+.grupo-tipo-row td {
+  padding: 7px 14px !important;
+}
+.grupo-tipo-row:first-child {
+  border-top: none !important;
+}
+
+/* Estado parcial: alguns pagos, outros não */
+.status-btn.parcial {
+  background: rgba(77,121,255,.12);
+  color: #4D79FF;
+  border: 1px solid rgba(77,121,255,.25);
+}
+.status-btn.parcial:hover { background: rgba(77,121,255,.22); }
+.status-btn.parcial .status-dot { background: #4D79FF; }
+
+/* Botão de grupo levemente maior */
+.status-grupo {
+  font-size: .72rem !important;
+  padding: 4px 12px !important;
+}
