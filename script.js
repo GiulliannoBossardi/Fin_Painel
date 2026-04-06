@@ -261,7 +261,7 @@ function confirmarTrocarSenha(){const nova=document.getElementById('novaSenha').
 /* ════════════════════════════════════════════
    NAVEGAÇÃO
 ════════════════════════════════════════════ */
-const tabNames={salario:'Salário',saidas:'Saídas',entradas:'Entradas',controle:'Controle',investimento:'Investimento',configuracao:'Configuração'};
+const tabNames={salario:'Salário',saidas:'Saídas',entradas:'Entradas',controle:'Controle',investimento:'Investimento',resumo:'Resumo',configuracao:'Configuração'};
 function navigateTo(tab, skipSave=false){
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
   document.querySelectorAll('.tab-panel').forEach(el=>el.classList.toggle('active',el.id==='tab-'+tab));
@@ -272,6 +272,7 @@ function navigateTo(tab, skipSave=false){
   if(tab==='controle')renderControle();
   if(tab==='investimento'){renderInvestTable();atualizarStatsInvest();}
   if(tab==='saidas'){renderSaidasTable();atualizarStatsSaida();}
+  if(tab==='resumo'){initResumoTab();}
   if(tab==='entradas'){renderEntradasTable();atualizarStatsEntrada();}
 }
 document.querySelectorAll('.nav-item').forEach(item=>item.addEventListener('click',()=>navigateTo(item.dataset.tab)));
@@ -997,6 +998,280 @@ function exportarConsolidadoXlsx(){
   const nomeArq='FinPanel_Consolidado_'+periodo.replace('/','_')+'.xlsx';
   XLSX.writeFile(wb,nomeArq);
   Toast.show('Exportado: '+nomeArq,'success');
+}
+
+
+/* ════════════════════════════════════════════
+   ABA RESUMO POR PESSOA
+   Gera um card visual (tipo print) com o
+   resumo financeiro de uma pessoa específica
+   e permite compartilhar via WhatsApp ou
+   salvar como imagem.
+════════════════════════════════════════════ */
+
+const TIPOS_GENERICOS = new Set([
+  'Cartão de Crédito','Boleto','Financiamento','PIX','Salário','Aluguel',
+  'Telefone','Casa','Diversas','Mercado','Luz','Água','Internet',
+  'cartão de crédito','boleto','financiamento','pix','salário','aluguel'
+]);
+
+function initResumoTab(){
+  /* Período padrão: mês atual */
+  const periodoEl = document.getElementById('resumoPeriodo');
+  if(!periodoEl.value) periodoEl.value = Fmt.nowYM();
+  popularPessoasResumo();
+}
+
+function popularPessoasResumo(){
+  const ref = document.getElementById('resumoPeriodo').value;
+  const sel = document.getElementById('resumoPessoa');
+  const saidas   = _expandirRef(DB.get('saidas')||[], ref, 'saida');
+  const entradas = _expandirRef(DB.get('entradas')||[], ref, 'entrada');
+
+  const pessoas = [...new Set([
+    ...saidas.map(r=>r.tipo),
+    ...entradas.map(r=>r.tipo)
+  ].filter(t=>t&&!TIPOS_GENERICOS.has(t)))].sort();
+
+  const atual = sel.value;
+  sel.innerHTML = '<option value="">Todas as pessoas</option>';
+  pessoas.forEach(p=>{
+    const o=document.createElement('option');
+    o.value=p; o.textContent=p;
+    sel.appendChild(o);
+  });
+  if(atual) sel.value = atual;
+}
+
+/* Expande saidas ou entradas para um ref específico */
+function _expandirRef(arr, ref, tipo){
+  const rows=[];
+  arr.forEach(s=>{
+    if(s.forma==='avista'){
+      if(s.ref===ref) rows.push({...s,parcelaNum:null,parcelaRef:s.ref,parcelaTotal:1,valorExib:s.valor,_parcelaIdx:'av'});
+    } else {
+      for(let i=0;i<(s.nParcelas||1);i++){
+        const pr=Fmt.addMonths(s.primeiraParcela,i);
+        if(pr===ref) rows.push({...s,parcelaNum:i+1,parcelaRef:pr,parcelaTotal:s.nParcelas,valorExib:s.valor,_parcelaIdx:i});
+      }
+    }
+  });
+  return rows;
+}
+
+function calcularResumoPessoa(ref, pessoaFiltro){
+  const saidas   = _expandirRef(DB.get('saidas')||[], ref, 'saida');
+  const entradas = _expandirRef(DB.get('entradas')||[], ref, 'entrada');
+
+  const todasPessoas = pessoaFiltro
+    ? [pessoaFiltro]
+    : [...new Set([...saidas.map(r=>r.tipo),...entradas.map(r=>r.tipo)]
+        .filter(t=>t&&!TIPOS_GENERICOS.has(t)))].sort();
+
+  return todasPessoas.map(pessoa=>{
+    const sP = saidas.filter(r=>r.tipo===pessoa);
+    const eP = entradas.filter(r=>r.tipo===pessoa);
+    const totSaidas   = sP.reduce((s,r)=>s+r.valorExib,0);
+    const totEntradas = eP.reduce((s,r)=>s+r.valorExib,0);
+    const saldo = totEntradas - totSaidas;
+    return {pessoa, saidas:sP, entradas:eP, totSaidas, totEntradas, saldo};
+  }).filter(p=>p.saidas.length>0||p.entradas.length>0);
+}
+
+function gerarResumoVisual(){
+  const ref    = document.getElementById('resumoPeriodo').value;
+  const pessoa = document.getElementById('resumoPessoa').value;
+
+  if(!ref){ Toast.show('Selecione um período','error'); return; }
+
+  popularPessoasResumo();
+  const dados = calcularResumoPessoa(ref, pessoa||null);
+
+  if(!dados.length){
+    document.getElementById('resumoArea').style.display='none';
+    document.getElementById('resumoEmpty').style.display='block';
+    document.getElementById('resumoEmpty').innerHTML='Nenhum lançamento com pessoa identificada em <strong>'+Fmt.ref(ref)+'</strong>.';
+    document.getElementById('btnShareWpp').style.display='none';
+    document.getElementById('btnSalvarImg').style.display='none';
+    return;
+  }
+
+  /* Gera o card visual */
+  const card = document.getElementById('resumoCard');
+  card.innerHTML = buildResumoCard(dados, ref);
+
+  document.getElementById('resumoArea').style.display='block';
+  document.getElementById('resumoEmpty').style.display='none';
+  document.getElementById('btnShareWpp').style.display='flex';
+  document.getElementById('btnSalvarImg').style.display='flex';
+}
+
+function buildResumoCard(dados, ref){
+  const agora = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
+  const totEnt = dados.reduce((s,d)=>s+d.totEntradas,0);
+  const totSai = dados.reduce((s,d)=>s+d.totSaidas,0);
+  const saldoGeral = totEnt - totSai;
+  const sgClass = saldoGeral>=0?'resumo-pos':'resumo-neg';
+  const sgDesc  = saldoGeral>0?'No total, me devem':'No total, eu devo';
+
+  let html = `
+  <div class="resumo-print" id="resumoPrint">
+    <!-- Cabeçalho do card -->
+    <div class="resumo-print-header">
+      <div class="resumo-print-logo">
+        <div class="resumo-print-logo-icon">
+          <svg viewBox="0 0 18 18" fill="none" stroke="#05120D" stroke-width="2.2" stroke-linecap="round">
+            <rect x="1" y="4" width="16" height="11" rx="2"/>
+            <path d="M5 4V3a1 1 0 011-1h6a1 1 0 011 1v1"/>
+            <path d="M9 9v2M7 9h4"/>
+          </svg>
+        </div>
+        <div>
+          <div class="resumo-print-nome">FinPanel</div>
+          <div class="resumo-print-sub">Resumo Financeiro</div>
+        </div>
+      </div>
+      <div class="resumo-print-periodo">${Fmt.ref(ref)}</div>
+    </div>
+
+    <!-- Saldo geral -->
+    <div class="resumo-saldo-geral">
+      <div class="resumo-saldo-label">Saldo Geral</div>
+      <div class="resumo-saldo-valor ${sgClass}">
+        ${saldoGeral>=0?Fmt.brl(saldoGeral):'−'+Fmt.brl(Math.abs(saldoGeral))}
+      </div>
+      <div class="resumo-saldo-desc">${sgDesc} ${Fmt.brl(Math.abs(saldoGeral))}</div>
+    </div>`;
+
+  dados.forEach(({pessoa, saidas, entradas, totSaidas, totEntradas, saldo})=>{
+    const sClass = saldo>0?'resumo-pos':saldo<0?'resumo-neg':'resumo-zero';
+    const sDesc  = saldo>0?`${pessoa} me deve ${Fmt.brl(saldo)}`
+                 : saldo<0?`Eu devo ${Fmt.brl(Math.abs(saldo))} a ${pessoa}`
+                 : `Quites ✅`;
+
+    html += `<div class="resumo-pessoa-block">
+      <div class="resumo-pessoa-header">
+        <div class="resumo-pessoa-avatar">${pessoa.slice(0,2).toUpperCase()}</div>
+        <div class="resumo-pessoa-info">
+          <div class="resumo-pessoa-nome">${pessoa}</div>
+          <div class="resumo-pessoa-saldo ${sClass}">${sDesc}</div>
+        </div>
+      </div>`;
+
+    /* Entradas */
+    if(entradas.length){
+      html += `<div class="resumo-grupo-label resumo-grupo-ent">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Entradas · <span>${Fmt.brl(totEntradas)}</span>
+      </div>`;
+      entradas.forEach(r=>{
+        const key  = r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);
+        const pago = (r.pagos||{})[key]||false;
+        const parc = r.parcelaNum!=null?` ${r.parcelaNum}/${r.parcelaTotal}`:'';
+        html += `<div class="resumo-item">
+          <div class="resumo-item-left">
+            <span class="resumo-item-desc">${r.descricao||'—'}${parc?`<span class="resumo-item-parc">${parc}</span>`:''}</span>
+          </div>
+          <div class="resumo-item-right">
+            <span class="resumo-item-val resumo-pos">+${Fmt.brl(r.valorExib)}</span>
+            <span class="resumo-status ${pago?'resumo-pago':'resumo-pendente'}">${pago?'✔':'●'}</span>
+          </div>
+        </div>`;
+      });
+    }
+
+    /* Saídas */
+    if(saidas.length){
+      html += `<div class="resumo-grupo-label resumo-grupo-sai">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 16 12 21 17 16"/><line x1="12" y1="21" x2="12" y2="9"/></svg>
+        Saídas · <span>${Fmt.brl(totSaidas)}</span>
+      </div>`;
+      saidas.forEach(r=>{
+        const key  = r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);
+        const pago = (r.pagos||{})[key]||false;
+        const parc = r.parcelaNum!=null?` ${r.parcelaNum}/${r.parcelaTotal}`:'';
+        html += `<div class="resumo-item">
+          <div class="resumo-item-left">
+            <span class="resumo-item-desc">${r.descricao||'—'}${parc?`<span class="resumo-item-parc">${parc}</span>`:''}</span>
+          </div>
+          <div class="resumo-item-right">
+            <span class="resumo-item-val resumo-neg">−${Fmt.brl(r.valorExib)}</span>
+            <span class="resumo-status ${pago?'resumo-pago':'resumo-pendente'}">${pago?'✔':'●'}</span>
+          </div>
+        </div>`;
+      });
+    }
+
+    html += `</div>`; /* fecha pessoa-block */
+  });
+
+  html += `
+    <div class="resumo-print-footer">Gerado em ${agora} · FinPanel</div>
+  </div>`;
+
+  return html;
+}
+
+/* ── Salvar como imagem usando html2canvas ── */
+async function salvarImagemResumo(){
+  if(typeof html2canvas==='undefined'){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    document.head.appendChild(s);
+    await new Promise(r=>s.onload=r);
+  }
+  const el=document.getElementById('resumoPrint');
+  Toast.show('Gerando imagem…','info',2000);
+  const canvas=await html2canvas(el,{
+    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--bg-surface').trim()||'#13161E',
+    scale:2,
+    useCORS:true,
+    logging:false
+  });
+  const link=document.createElement('a');
+  const ref=document.getElementById('resumoPeriodo').value;
+  const pessoa=document.getElementById('resumoPessoa').value||'geral';
+  link.download=`FinPanel_Resumo_${Fmt.ref(ref).replace('/','_')}_${pessoa}.png`;
+  link.href=canvas.toDataURL('image/png');
+  link.click();
+  Toast.show('Imagem salva!','success');
+}
+
+/* ── Compartilhar via WhatsApp (texto formatado) ── */
+function compartilharResumoWpp(){
+  const ref    = document.getElementById('resumoPeriodo').value;
+  const pessoa = document.getElementById('resumoPessoa').value;
+  const dados  = calcularResumoPessoa(ref, pessoa||null);
+  if(!dados.length){ Toast.show('Nenhum dado','warn'); return; }
+
+  const linhas=[`📊 *FinPanel — ${Fmt.ref(ref)}*\n`];
+  dados.forEach(({pessoa,entradas,saidas,totEntradas,totSaidas,saldo})=>{
+    linhas.push(`👤 *${pessoa}*`);
+    if(entradas.length){
+      linhas.push(`  ↑ _Entradas_ — ${Fmt.brl(totEntradas)}`);
+      entradas.forEach(r=>{
+        const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);
+        const pago=(r.pagos||{})[key];
+        const parc=r.parcelaNum!=null?` (${r.parcelaNum}/${r.parcelaTotal})`:'';
+        linhas.push(`    ${pago?'✔':'●'} ${r.descricao}${parc}: +${Fmt.brl(r.valorExib)}`);
+      });
+    }
+    if(saidas.length){
+      linhas.push(`  ↓ _Saídas_ — ${Fmt.brl(totSaidas)}`);
+      saidas.forEach(r=>{
+        const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);
+        const pago=(r.pagos||{})[key];
+        const parc=r.parcelaNum!=null?` (${r.parcelaNum}/${r.parcelaTotal})`:'';
+        linhas.push(`    ${pago?'✔':'●'} ${r.descricao}${parc}: −${Fmt.brl(r.valorExib)}`);
+      });
+    }
+    const saldoTxt=saldo>0?`➡️ ${pessoa} me deve *${Fmt.brl(saldo)}*`
+      :saldo<0?`➡️ Eu devo *${Fmt.brl(Math.abs(saldo))}* a ${pessoa}`
+      :'➡️ Quites ✅';
+    linhas.push(`  ${saldoTxt}\n`);
+  });
+
+  window.open('https://wa.me/?text='+encodeURIComponent(linhas.join('\n')),'_blank');
 }
 
 /* ════════════════════════════════════════════

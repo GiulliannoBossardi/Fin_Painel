@@ -569,3 +569,197 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   font-size: .72rem !important;
   padding: 4px 12px !important;
 }
+
+/* ════════════════════════════════════════════
+   ABA RESUMO — Card visual (estilo print)
+════════════════════════════════════════════ */
+
+/* Container do card — max 480px para parecer um print de celular */
+.resumo-print {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  max-width: 480px;
+  margin: 0 auto;
+  font-family: var(--font-body);
+}
+
+/* Cabeçalho */
+.resumo-print-header {
+  background: var(--bg-elevated);
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+.resumo-print-logo { display: flex; align-items: center; gap: 10px; }
+.resumo-print-logo-icon {
+  width: 32px; height: 32px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+}
+.resumo-print-logo-icon svg { width: 16px; height: 16px; }
+.resumo-print-nome {
+  font-family: var(--font-display);
+  font-size: .95rem;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+.resumo-print-sub {
+  font-size: .62rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.resumo-print-periodo {
+  font-family: var(--font-mono);
+  font-size: .78rem;
+  color: var(--accent);
+  background: var(--accent-dim);
+  padding: 4px 10px;
+  border-radius: 99px;
+}
+
+/* Saldo geral */
+.resumo-saldo-geral {
+  padding: 18px 18px 16px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--bg-elevated) 0%, transparent 100%);
+}
+.resumo-saldo-label {
+  font-size: .66rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.resumo-saldo-valor {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 500;
+  letter-spacing: -.02em;
+}
+.resumo-saldo-desc {
+  font-size: .76rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Bloco de pessoa */
+.resumo-pessoa-block {
+  border-top: 2px solid var(--border);
+}
+.resumo-pessoa-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px 10px;
+  background: var(--bg-elevated);
+}
+.resumo-pessoa-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: .78rem;
+  flex-shrink: 0;
+}
+.resumo-pessoa-nome {
+  font-weight: 600;
+  font-size: .9rem;
+}
+.resumo-pessoa-saldo {
+  font-size: .78rem;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+}
+
+/* Labels de grupo */
+.resumo-grupo-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 18px;
+  font-size: .7rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  border-top: 1px solid var(--border);
+}
+.resumo-grupo-label span { font-weight: 600; }
+.resumo-grupo-ent { color: var(--income); background: rgba(0,201,122,.05); }
+.resumo-grupo-sai { color: var(--expense); background: rgba(255,77,106,.05); }
+
+/* Item de lançamento */
+.resumo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 18px;
+  border-top: 1px solid var(--border);
+  gap: 8px;
+}
+.resumo-item-left { min-width: 0; flex: 1; }
+.resumo-item-desc {
+  font-size: .82rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.resumo-item-parc {
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  color: var(--text-muted);
+  background: var(--bg-overlay);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.resumo-item-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.resumo-item-val {
+  font-family: var(--font-mono);
+  font-size: .82rem;
+  font-weight: 500;
+}
+
+/* Status pago/pendente */
+.resumo-status {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .62rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.resumo-pago    { background: rgba(0,201,122,.15); color: var(--income); }
+.resumo-pendente{ background: rgba(255,184,48,.15); color: var(--warn); }
+
+/* Cores de saldo */
+.resumo-pos  { color: var(--income); }
+.resumo-neg  { color: var(--expense); }
+.resumo-zero { color: var(--text-muted); }
+
+/* Rodapé do card */
+.resumo-print-footer {
+  padding: 10px 18px;
+  font-size: .68rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
