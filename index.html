@@ -40,8 +40,7 @@
     </div>
     <div class="nav-group-label">Principal</div>
     <div class="nav-item active" data-tab="salario" title="Salário"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span>Salário</span></div>
-    <div class="nav-item" data-tab="saidas" title="Saídas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Saídas</span></div>
-    <div class="nav-item" data-tab="entradas" title="Entradas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>Entradas</span></div>
+    <div class="nav-item" data-tab="entradasaidas" title="Entradas/Saídas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="21"/><polyline points="7 16 12 21 17 16"/></svg><span>Entradas/Saídas</span></div>
     <div class="nav-item" data-tab="controle" title="Controle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg><span>Controle</span></div>
     <div class="nav-item" data-tab="investimento" title="Investimento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg><span>Investimento</span></div>
     <div class="nav-group-label">Sistema</div>
@@ -145,137 +144,122 @@
         </div>
       </div>
 
-      <!-- ═══ SAÍDAS ═══ -->
-      <div class="tab-panel" id="tab-saidas">
-        <!-- Filtro global espelhado -->
+      <!-- ═══ ENTRADAS / SAÍDAS ═══ -->
+      <div class="tab-panel" id="tab-entradasaidas">
         <div class="filter-bar">
-          <label>Ano:</label><select id="saidaFiltroAnoDisp" onchange="onFiltroAnoChange()" style="width:100px;"></select>
+          <label>Ano:</label><select id="esFiltroAnoDisp" onchange="onFiltroAnoChange()" style="width:100px;"></select>
           <div class="filter-sep"></div>
-          <label>Mês / Ano:</label><select id="saidaFiltroRefDisp" onchange="onFiltroRefChange()" style="width:190px;"></select>
+          <label>Mês / Ano:</label><select id="esFiltroRefDisp" onchange="onFiltroRefChange()" style="width:190px;"></select>
           <button class="filter-clear" onclick="limparFiltro()">✕ Limpar</button>
-          <span id="saidaFiltroLabel" class="filter-label-badge" style="display:none;"></span>
+          <span id="esFiltroLabel" class="filter-label-badge" style="display:none;"></span>
         </div>
-        <div class="grid-3 mb-20">
-          <div class="stat-card red"><div class="stat-label">Total de Saídas</div><div class="stat-value expense" id="saidaStatTotal">R$ 0,00</div><div class="stat-sub">Soma das parcelas no filtro</div></div>
-          <div class="stat-card warn"><div class="stat-label">A Pagar</div><div class="stat-value neutral" id="saidaStatPendente">R$ 0,00</div><div class="stat-sub">Parcelas pendentes</div></div>
-          <div class="stat-card green"><div class="stat-label">Pago</div><div class="stat-value income" id="saidaStatPago">R$ 0,00</div><div class="stat-sub">Parcelas quitadas</div></div>
-        </div>
-        <!-- grid-2: tabela + painel inserção lado a lado -->
-        <div class="grid-2">
-          <div class="card">
-            <div class="card-header"><div class="card-title">Tabela de Saídas</div><div class="flex-gap"><span class="card-badge" id="saidaBadge">0 registros</span><input type="text" placeholder="Buscar..." style="width:130px;padding:5px 10px;font-size:.78rem;" id="filterSaida" oninput="renderSaidasTable()"/></div></div>
-            <div class="table-wrap" style="max-height:500px;">
-              <table id="saidasTable">
-                <thead><tr>
-                  <th onclick="sortSaida('ref')" data-col="ref">Ref. <span class="sort-icon">↕</span></th>
-                  <th onclick="sortSaida('tipo')" data-col="tipo">Tipo <span class="sort-icon">↕</span></th>
-                  <th onclick="sortSaida('descricao')" data-col="descricao">Descrição <span class="sort-icon">↕</span></th>
-                  <th class="no-sort">Parcela</th>
-                  <th onclick="sortSaida('valor')" data-col="valor">Valor <span class="sort-icon">↕</span></th>
-                  <th class="no-sort">Status</th>
-                  <th class="no-sort">Ações</th>
-                </tr></thead>
-                <tbody id="saidasColFilter">
-                  <tr class="col-filter-row">
-                    <td><input class="col-filter-input" id="cfSaidaRef"  placeholder="Ref..."  oninput="renderSaidasTable()"/></td>
-                    <td><input class="col-filter-input" id="cfSaidaTipo" placeholder="Tipo..." oninput="renderSaidasTable()"/></td>
-                    <td><input class="col-filter-input" id="cfSaidaDesc" placeholder="Desc..." oninput="renderSaidasTable()"/></td>
-                    <td></td>
-                    <td><input class="col-filter-input" id="cfSaidaValor" placeholder="Valor..." oninput="renderSaidasTable()"/></td>
-                    <td></td><td></td>
-                  </tr>
-                </tbody>
-                <tbody id="saidasBody"></tbody>
-              </table>
-            </div>
-          </div>
-          <!-- PAINEL INSERÇÃO SAÍDAS (lado direito, igual ao Salário) -->
-          <div class="insert-panel" style="align-self:start;">
-            <div class="insert-panel-header"><div class="insert-icon red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div><div><div class="section-title">Registrar Saída</div><div class="text-muted">Adicionar nova despesa</div></div></div>
-            <div class="form-grid single">
-              <div class="form-group"><label>Referência (Mês/Ano)</label><input type="month" id="saidaRef"/></div>
-              <div class="form-group"><label>Tipo de Conta</label><select id="saidaTipoConta"></select></div>
-              <div class="form-group"><label>Descrição</label><input type="text" id="saidaDescricao" placeholder="Ex: Conta de luz, Nubank..."/></div>
-              <div class="form-group"><label>Forma de Pagamento</label>
-                <select id="saidaForma" onchange="onSaidaFormaChange()"><option value="avista">À Vista</option><option value="parcelado">Parcelado</option></select>
-              </div>
-              <div class="form-group"><label id="saidaValorLabel">Valor Pago</label><div class="currency-input-wrap"><span class="currency-prefix">R$</span><input type="text" id="saidaValor" placeholder="0.000,00" oninput="maskCurrency(this)"/></div></div>
-            </div>
-            <div class="parcela-fields" id="parcelaFields">
-              <div class="parcela-fields-title">Detalhes do Parcelamento</div>
-              <div class="field-row-2">
-                <div class="form-group"><label>Nº de Parcelas</label><input type="text" id="saidaNParcelas" placeholder="Ex: 12" oninput="this.value=this.value.replace(/\D/g,'')"/></div>
-                <div class="form-group"><label>Mês/Ano da 1ª Parcela</label><input type="month" id="saidaPrimeiraParcela"/></div>
-              </div>
-            </div>
-            <div class="btn-confirmar-wrap"><button class="btn btn-primary btn-full btn-confirmar" onclick="confirmarInsercaoSaida()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmar Saída</button></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ═══ ENTRADAS ═══ -->
-      <div class="tab-panel" id="tab-entradas">
-        <div class="filter-bar">
-          <label>Ano:</label><select id="entradaFiltroAnoDisp" onchange="onFiltroAnoChange()" style="width:100px;"></select>
-          <div class="filter-sep"></div>
-          <label>Mês / Ano:</label><select id="entradaFiltroRefDisp" onchange="onFiltroRefChange()" style="width:190px;"></select>
-          <button class="filter-clear" onclick="limparFiltro()">✕ Limpar</button>
-          <span id="entradaFiltroLabel" class="filter-label-badge" style="display:none;"></span>
-        </div>
+        <!-- Stats unificados: 3 cards de Entradas + 3 de Saídas -->
         <div class="grid-3 mb-20">
           <div class="stat-card green"><div class="stat-label">Total de Entradas</div><div class="stat-value income" id="entradaStatTotal">R$ 0,00</div><div class="stat-sub">Soma das parcelas no filtro</div></div>
-          <div class="stat-card warn"><div class="stat-label">A Receber</div><div class="stat-value neutral" id="entradaStatPendente">R$ 0,00</div><div class="stat-sub">Parcelas pendentes</div></div>
-          <div class="stat-card blue"><div class="stat-label">Recebido</div><div class="stat-value blue" id="entradaStatPago">R$ 0,00</div><div class="stat-sub">Parcelas confirmadas</div></div>
+          <div class="stat-card red"><div class="stat-label">Total de Saídas</div><div class="stat-value expense" id="saidaStatTotal">R$ 0,00</div><div class="stat-sub">Soma das parcelas no filtro</div></div>
+          <div class="stat-card blue" id="esSaldoCard"><div class="stat-label">Saldo do Período</div><div class="stat-value" id="esStatSaldo">R$ 0,00</div><div class="stat-sub">Entradas − Saídas</div></div>
         </div>
-        <!-- grid-2: tabela + painel inserção lado a lado -->
+        <div class="grid-3 mb-20">
+          <div class="stat-card warn"><div class="stat-label">A Receber</div><div class="stat-value neutral" id="entradaStatPendente">R$ 0,00</div><div class="stat-sub">Entradas pendentes</div></div>
+          <div class="stat-card warn"><div class="stat-label">A Pagar</div><div class="stat-value neutral" id="saidaStatPendente">R$ 0,00</div><div class="stat-sub">Saídas pendentes</div></div>
+          <div class="stat-card green"><div class="stat-label">Recebido / Pago</div><div class="stat-value income" id="esStatConfirmado">R$ 0,00</div><div class="stat-sub">Entradas recebidas − Saídas pagas</div></div>
+        </div>
+        <!-- grid-2: tabelas + painel inserção lado a lado -->
         <div class="grid-2">
-          <div class="card">
-            <div class="card-header"><div class="card-title">Tabela de Entradas</div><div class="flex-gap"><span class="card-badge" id="entradaBadge">0 registros</span><input type="text" placeholder="Buscar..." style="width:130px;padding:5px 10px;font-size:.78rem;" id="filterEntrada" oninput="renderEntradasTable()"/></div></div>
-            <div class="table-wrap" style="max-height:500px;">
-              <table id="entradasTable">
-                <thead><tr>
-                  <th onclick="sortEntrada('ref')" data-col="ref">Ref. <span class="sort-icon">↕</span></th>
-                  <th onclick="sortEntrada('tipo')" data-col="tipo">Tipo <span class="sort-icon">↕</span></th>
-                  <th onclick="sortEntrada('descricao')" data-col="descricao">Descrição <span class="sort-icon">↕</span></th>
-                  <th class="no-sort">Parcela</th>
-                  <th onclick="sortEntrada('valor')" data-col="valor">Valor <span class="sort-icon">↕</span></th>
-                  <th class="no-sort">Status</th>
-                  <th class="no-sort">Ações</th>
-                </tr></thead>
-                <tbody id="entradasColFilter">
-                  <tr class="col-filter-row">
-                    <td><input class="col-filter-input" id="cfEntradaRef"  placeholder="Ref..."  oninput="renderEntradasTable()"/></td>
-                    <td><input class="col-filter-input" id="cfEntradaTipo" placeholder="Tipo..." oninput="renderEntradasTable()"/></td>
-                    <td><input class="col-filter-input" id="cfEntradaDesc" placeholder="Desc..." oninput="renderEntradasTable()"/></td>
-                    <td></td>
-                    <td><input class="col-filter-input" id="cfEntradaValor" placeholder="Valor..." oninput="renderEntradasTable()"/></td>
-                    <td></td><td></td>
-                  </tr>
-                </tbody>
-                <tbody id="entradasBody"></tbody>
-              </table>
+          <div style="display:flex;flex-direction:column;gap:20px;">
+            <!-- Tabela Entradas -->
+            <div class="card">
+              <div class="card-header"><div class="card-title">Tabela de Entradas</div><div class="flex-gap"><span class="card-badge" id="entradaBadge">0 registros</span><input type="text" placeholder="Buscar..." style="width:130px;padding:5px 10px;font-size:.78rem;" id="filterEntrada" oninput="renderEntradasTable()"/></div></div>
+              <div class="table-wrap" style="max-height:380px;">
+                <table id="entradasTable">
+                  <thead><tr>
+                    <th onclick="sortEntrada('ref')" data-col="ref">Ref. <span class="sort-icon">↕</span></th>
+                    <th onclick="sortEntrada('tipo')" data-col="tipo">Tipo <span class="sort-icon">↕</span></th>
+                    <th onclick="sortEntrada('descricao')" data-col="descricao">Descrição <span class="sort-icon">↕</span></th>
+                    <th class="no-sort">Parcela</th>
+                    <th onclick="sortEntrada('valor')" data-col="valor">Valor <span class="sort-icon">↕</span></th>
+                    <th class="no-sort">Status</th>
+                    <th class="no-sort">Ações</th>
+                  </tr></thead>
+                  <tbody id="entradasColFilter">
+                    <tr class="col-filter-row">
+                      <td><input class="col-filter-input" id="cfEntradaRef"  placeholder="Ref..."  oninput="renderEntradasTable()"/></td>
+                      <td><input class="col-filter-input" id="cfEntradaTipo" placeholder="Tipo..." oninput="renderEntradasTable()"/></td>
+                      <td><input class="col-filter-input" id="cfEntradaDesc" placeholder="Desc..." oninput="renderEntradasTable()"/></td>
+                      <td></td>
+                      <td><input class="col-filter-input" id="cfEntradaValor" placeholder="Valor..." oninput="renderEntradasTable()"/></td>
+                      <td></td><td></td>
+                    </tr>
+                  </tbody>
+                  <tbody id="entradasBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <!-- Tabela Saídas -->
+            <div class="card">
+              <div class="card-header"><div class="card-title">Tabela de Saídas</div><div class="flex-gap"><span class="card-badge" id="saidaBadge">0 registros</span><input type="text" placeholder="Buscar..." style="width:130px;padding:5px 10px;font-size:.78rem;" id="filterSaida" oninput="renderSaidasTable()"/></div></div>
+              <div class="table-wrap" style="max-height:380px;">
+                <table id="saidasTable">
+                  <thead><tr>
+                    <th onclick="sortSaida('ref')" data-col="ref">Ref. <span class="sort-icon">↕</span></th>
+                    <th onclick="sortSaida('tipo')" data-col="tipo">Tipo <span class="sort-icon">↕</span></th>
+                    <th onclick="sortSaida('descricao')" data-col="descricao">Descrição <span class="sort-icon">↕</span></th>
+                    <th class="no-sort">Parcela</th>
+                    <th onclick="sortSaida('valor')" data-col="valor">Valor <span class="sort-icon">↕</span></th>
+                    <th class="no-sort">Status</th>
+                    <th class="no-sort">Ações</th>
+                  </tr></thead>
+                  <tbody id="saidasColFilter">
+                    <tr class="col-filter-row">
+                      <td><input class="col-filter-input" id="cfSaidaRef"  placeholder="Ref..."  oninput="renderSaidasTable()"/></td>
+                      <td><input class="col-filter-input" id="cfSaidaTipo" placeholder="Tipo..." oninput="renderSaidasTable()"/></td>
+                      <td><input class="col-filter-input" id="cfSaidaDesc" placeholder="Desc..." oninput="renderSaidasTable()"/></td>
+                      <td></td>
+                      <td><input class="col-filter-input" id="cfSaidaValor" placeholder="Valor..." oninput="renderSaidasTable()"/></td>
+                      <td></td><td></td>
+                    </tr>
+                  </tbody>
+                  <tbody id="saidasBody"></tbody>
+                </table>
+              </div>
             </div>
           </div>
-          <!-- PAINEL INSERÇÃO ENTRADAS (lado direito, igual ao Salário) -->
+
+          <!-- PAINEL INSERÇÃO UNIFICADO (lado direito — igual ao Investimento) -->
           <div class="insert-panel" style="align-self:start;">
-            <div class="insert-panel-header"><div class="insert-icon" style="background:rgba(0,201,122,.15);color:var(--income);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div><div class="section-title">Registrar Entrada</div><div class="text-muted">Adicionar recebimento</div></div></div>
-            <div class="form-grid single">
-              <div class="form-group"><label>Referência (Mês/Ano)</label><input type="month" id="entradaRef"/></div>
-              <div class="form-group"><label>Tipo de Conta</label><select id="entradaTipoConta"></select></div>
-              <div class="form-group"><label>Descrição</label><input type="text" id="entradaDescricao" placeholder="Ex: Aluguel, freelance..."/></div>
-              <div class="form-group"><label>Forma de Recebimento</label>
-                <select id="entradaForma" onchange="onEntradaFormaChange()"><option value="avista">À Vista</option><option value="parcelado">Parcelado</option></select>
+            <div class="insert-panel-header" id="esPanelHeader">
+              <div class="insert-icon" id="esPanelIcon" style="background:rgba(0,201,122,.15);color:var(--income);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               </div>
-              <div class="form-group"><label id="entradaValorLabel">Valor Recebido</label><div class="currency-input-wrap"><span class="currency-prefix">R$</span><input type="text" id="entradaValor" placeholder="0.000,00" oninput="maskCurrency(this)"/></div></div>
+              <div>
+                <div class="section-title" id="esPanelTitle">Registrar Entrada</div>
+                <div class="text-muted" id="esPanelSub">Adicionar recebimento</div>
+              </div>
             </div>
-            <div class="parcela-fields" id="entradaParcelaFields">
+            <div class="form-grid single">
+              <div class="form-group"><label>Referência (Mês/Ano)</label><input type="month" id="esRef"/></div>
+              <!-- Toggle Entrada / Saída -->
+              <div class="form-group"><label>Tipo de Lançamento</label>
+                <select id="esTipoLancamento" onchange="onEsTipoLancamentoChange()">
+                  <option value="entrada">📈 Entrada (positivo)</option>
+                  <option value="saida">📉 Saída (negativo)</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Tipo de Conta</label><select id="esTipoConta"></select></div>
+              <div class="form-group"><label>Descrição</label><input type="text" id="esDescricao" placeholder="Ex: Aluguel, freelance..."/></div>
+              <div class="form-group"><label id="esFormaLabel">Forma de Recebimento</label>
+                <select id="esForma" onchange="onEsFormaChange()"><option value="avista">À Vista</option><option value="parcelado">Parcelado</option></select>
+              </div>
+              <div class="form-group"><label id="esValorLabel">Valor Recebido</label><div class="currency-input-wrap"><span class="currency-prefix">R$</span><input type="text" id="esValor" placeholder="0.000,00" oninput="maskCurrency(this)"/></div></div>
+            </div>
+            <div class="parcela-fields" id="esParcelaFields">
               <div class="parcela-fields-title">Detalhes do Parcelamento</div>
               <div class="field-row-2">
-                <div class="form-group"><label>Nº de Parcelas</label><input type="text" id="entradaNParcelas" placeholder="Ex: 12" oninput="this.value=this.value.replace(/\D/g,'')"/></div>
-                <div class="form-group"><label>Mês/Ano da 1ª Parcela</label><input type="month" id="entradaPrimeiraParcela"/></div>
+                <div class="form-group"><label>Nº de Parcelas</label><input type="text" id="esNParcelas" placeholder="Ex: 12" oninput="this.value=this.value.replace(/\D/g,'')"/></div>
+                <div class="form-group"><label>Mês/Ano da 1ª Parcela</label><input type="month" id="esPrimeiraParcela"/></div>
               </div>
             </div>
-            <div class="btn-confirmar-wrap"><button class="btn btn-primary btn-full btn-confirmar" onclick="confirmarInsercaoEntrada()" style="background:var(--income);"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmar Entrada</button></div>
+            <div class="btn-confirmar-wrap"><button class="btn btn-primary btn-full btn-confirmar" id="esBtnConfirmar" onclick="confirmarInsercaoES()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span id="esBtnLabel">Confirmar Entrada</span></button></div>
           </div>
         </div>
       </div>

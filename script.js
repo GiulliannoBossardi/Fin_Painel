@@ -210,7 +210,8 @@ function entrarNoApp(silent=false){
   renderizarTudo();
   renderCriterios();renderTiposConta();renderTiposInvest();
   const ultimaAba=sessionStorage.getItem('fp_tab')||'salario';
-  navigateTo(ultimaAba,true);
+  const abaValida=tabNames[ultimaAba]?ultimaAba:(ultimaAba==='saidas'||ultimaAba==='entradas'?'entradasaidas':'salario');
+  navigateTo(abaValida,true);
 }
 
 function fazerLogout(){
@@ -261,7 +262,7 @@ function confirmarTrocarSenha(){const nova=document.getElementById('novaSenha').
 /* ════════════════════════════════════════════
    NAVEGAÇÃO
 ════════════════════════════════════════════ */
-const tabNames={salario:'Salário',saidas:'Saídas',entradas:'Entradas',controle:'Controle',investimento:'Investimento',resumo:'Resumo',configuracao:'Configuração'};
+const tabNames={salario:'Salário',entradasaidas:'Entradas / Saídas',controle:'Controle',investimento:'Investimento',resumo:'Resumo',configuracao:'Configuração'};
 function navigateTo(tab, skipSave=false){
   document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.tab===tab));
   document.querySelectorAll('.tab-panel').forEach(el=>el.classList.toggle('active',el.id==='tab-'+tab));
@@ -271,9 +272,8 @@ function navigateTo(tab, skipSave=false){
   syncFiltroDisplays();
   if(tab==='controle')renderControle();
   if(tab==='investimento'){renderInvestTable();atualizarStatsInvest();}
-  if(tab==='saidas'){renderSaidasTable();atualizarStatsSaida();}
+  if(tab==='entradasaidas'){renderSaidasTable();atualizarStatsSaida();renderEntradasTable();atualizarStatsEntrada();atualizarStatsES();}
   if(tab==='resumo'){initResumoTab();}
-  if(tab==='entradas'){renderEntradasTable();atualizarStatsEntrada();}
 }
 document.querySelectorAll('.nav-item').forEach(item=>item.addEventListener('click',()=>navigateTo(item.dataset.tab)));
 document.querySelectorAll('.sub-tab').forEach(tab=>{tab.addEventListener('click',()=>{const k=tab.dataset.subtab;document.querySelectorAll('.sub-tab').forEach(t=>t.classList.toggle('active',t.dataset.subtab===k));document.querySelectorAll('.sub-panel').forEach(p=>p.classList.toggle('active',p.id==='subtab-'+k));});});
@@ -288,9 +288,9 @@ function maskCurrency(input){let v=input.value.replace(/\D/g,'');if(!v){input.va
 ════════════════════════════════════════════ */
 let filtroAno='', filtroRef='';
 
-const abaFiltroAnos =['filtroAno','saidaFiltroAnoDisp','entradaFiltroAnoDisp','ctrlFiltroAnoDisp','investFiltroAnoDisp'];
-const abaFiltroRefs =['filtroRef','saidaFiltroRefDisp','entradaFiltroRefDisp','ctrlFiltroRefDisp','investFiltroRefDisp'];
-const abaFiltroLabels=['filtroLabel','saidaFiltroLabel','entradaFiltroLabel','ctrlFiltroLabel','investFiltroLabel'];
+const abaFiltroAnos =['filtroAno','esFiltroAnoDisp','ctrlFiltroAnoDisp','investFiltroAnoDisp'];
+const abaFiltroRefs =['filtroRef','esFiltroRefDisp','ctrlFiltroRefDisp','investFiltroRefDisp'];
+const abaFiltroLabels=['filtroLabel','esFiltroLabel','ctrlFiltroLabel','investFiltroLabel'];
 
 function getAllRefs(){
   const set=new Set();
@@ -367,6 +367,7 @@ function renderizarTudo(){
   renderSalarioTable();renderExtrasTable();atualizarStats();
   renderSaidasTable();atualizarStatsSaida();
   renderEntradasTable();atualizarStatsEntrada();
+  atualizarStatsES();
   renderInvestTable();atualizarStatsInvest();
   renderControle();
 }
@@ -569,37 +570,129 @@ function atualizarStatsSaida(){
   if(srch)rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(srch)||(r.tipo||'').toLowerCase().includes(srch)||Fmt.ref(r.parcelaRef).toLowerCase().includes(srch));
   let total=0,pendente=0,pago=0;
   rows.forEach(r=>{total+=r.valorExib;const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);const pg=(r.pagos||{})[key]||false;if(pg)pago+=r.valorExib;else pendente+=r.valorExib;});
-  document.getElementById('saidaStatTotal').textContent=Fmt.brl(total);
-  document.getElementById('saidaStatPendente').textContent=Fmt.brl(pendente);
-  document.getElementById('saidaStatPago').textContent=Fmt.brl(pago);
+  const elTotal=document.getElementById('saidaStatTotal');if(elTotal)elTotal.textContent=Fmt.brl(total);
+  const elPend=document.getElementById('saidaStatPendente');if(elPend)elPend.textContent=Fmt.brl(pendente);
+  atualizarStatsES();
 }
 
-function onSaidaFormaChange(){const parcelado=document.getElementById('saidaForma').value==='parcelado';document.getElementById('parcelaFields').classList.toggle('visible',parcelado);document.getElementById('saidaValorLabel').textContent=parcelado?'Valor de cada parcela':'Valor Pago';}
+/* ── Painel unificado Entradas/Saídas ── */
+function onEsTipoLancamentoChange(){
+  const tipo=document.getElementById('esTipoLancamento').value;
+  const isEntrada=tipo==='entrada';
+  const icon=document.getElementById('esPanelIcon');
+  const title=document.getElementById('esPanelTitle');
+  const sub=document.getElementById('esPanelSub');
+  const formaLabel=document.getElementById('esFormaLabel');
+  const valorLabel=document.getElementById('esValorLabel');
+  const btn=document.getElementById('esBtnConfirmar');
+  const btnLabel=document.getElementById('esBtnLabel');
+  const descEl=document.getElementById('esDescricao');
 
-function confirmarInsercaoSaida(){
-  const ref=document.getElementById('saidaRef').value;
-  const tipo=document.getElementById('saidaTipoConta').value;
-  const descricao=document.getElementById('saidaDescricao').value.trim();
-  const forma=document.getElementById('saidaForma').value;
-  const valor=Fmt.parse(document.getElementById('saidaValor').value);
+  if(isEntrada){
+    icon.style.background='rgba(0,201,122,.15)';icon.style.color='var(--income)';
+    icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
+    title.textContent='Registrar Entrada';sub.textContent='Adicionar recebimento';
+    formaLabel.textContent='Forma de Recebimento';
+    valorLabel.textContent=document.getElementById('esForma').value==='parcelado'?'Valor de cada parcela':'Valor Recebido';
+    btn.style.background='var(--income)';btnLabel.textContent='Confirmar Entrada';
+    descEl.placeholder='Ex: Aluguel, freelance...';
+  } else {
+    icon.style.background='rgba(255,77,106,.15)';icon.style.color='var(--expense)';
+    icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 16 12 21 17 16"/><line x1="12" y1="21" x2="12" y2="9"/></svg>';
+    title.textContent='Registrar Saída';sub.textContent='Adicionar nova despesa';
+    formaLabel.textContent='Forma de Pagamento';
+    valorLabel.textContent=document.getElementById('esForma').value==='parcelado'?'Valor de cada parcela':'Valor Pago';
+    btn.style.background='var(--expense)';btnLabel.textContent='Confirmar Saída';
+    descEl.placeholder='Ex: Conta de luz, Nubank...';
+  }
+}
+
+function onEsFormaChange(){
+  const parcelado=document.getElementById('esForma').value==='parcelado';
+  document.getElementById('esParcelaFields').classList.toggle('visible',parcelado);
+  const tipo=document.getElementById('esTipoLancamento').value;
+  if(tipo==='entrada'){
+    document.getElementById('esValorLabel').textContent=parcelado?'Valor de cada parcela':'Valor Recebido';
+  } else {
+    document.getElementById('esValorLabel').textContent=parcelado?'Valor de cada parcela':'Valor Pago';
+  }
+}
+
+function confirmarInsercaoES(){
+  const tipo=document.getElementById('esTipoLancamento').value;
+  const ref=document.getElementById('esRef').value;
+  const tipoConta=document.getElementById('esTipoConta').value;
+  const descricao=document.getElementById('esDescricao').value.trim();
+  const forma=document.getElementById('esForma').value;
+  const valor=Fmt.parse(document.getElementById('esValor').value);
   if(!ref){Toast.show('Selecione a referência','error');return;}
-  if(!tipo){Toast.show('Selecione o tipo de conta','error');return;}
+  if(!tipoConta){Toast.show('Selecione o tipo de conta','error');return;}
   if(!descricao){Toast.show('Informe a descrição','error');return;}
   if(!valor){Toast.show('Informe o valor','error');return;}
-  const saida={id:Fmt.uid(),ref,tipo,descricao,forma,valor,pagos:{}};
-  if(forma==='parcelado'){
-    const nParcelas=parseInt(document.getElementById('saidaNParcelas').value)||0;
-    const primeiraParcela=document.getElementById('saidaPrimeiraParcela').value;
-    if(!nParcelas||nParcelas<1){Toast.show('Informe o número de parcelas','error');return;}
-    if(!primeiraParcela){Toast.show('Informe a 1ª parcela','error');return;}
-    saida.nParcelas=nParcelas;saida.primeiraParcela=primeiraParcela;
-  }else{saida.nParcelas=1;}
-  const saidas=DB.get('saidas')||[];saidas.push(saida);DB.set('saidas',saidas);
-  ['saidaRef','saidaDescricao','saidaValor','saidaNParcelas','saidaPrimeiraParcela'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('saidaForma').value='avista';document.getElementById('parcelaFields').classList.remove('visible');document.getElementById('saidaValorLabel').textContent='Valor Pago';
-  reconstruirFiltros();renderSaidasTable();atualizarStatsSaida();renderControle();
-  Toast.show(`Saída "${descricao}" registrada`,'success');
+
+  if(tipo==='entrada'){
+    const entrada={id:Fmt.uid(),ref,tipo:tipoConta,descricao,forma,valor,pagos:{}};
+    if(forma==='parcelado'){
+      const nParcelas=parseInt(document.getElementById('esNParcelas').value)||0;
+      const primeiraParcela=document.getElementById('esPrimeiraParcela').value;
+      if(!nParcelas||nParcelas<1){Toast.show('Informe o número de parcelas','error');return;}
+      if(!primeiraParcela){Toast.show('Informe a 1ª parcela','error');return;}
+      entrada.nParcelas=nParcelas;entrada.primeiraParcela=primeiraParcela;
+    }else{entrada.nParcelas=1;}
+    const entradas=DB.get('entradas')||[];entradas.push(entrada);DB.set('entradas',entradas);
+    Toast.show(`Entrada "${descricao}" registrada`,'success');
+    reconstruirFiltros();renderEntradasTable();atualizarStatsEntrada();renderControle();
+  } else {
+    const saida={id:Fmt.uid(),ref,tipo:tipoConta,descricao,forma,valor,pagos:{}};
+    if(forma==='parcelado'){
+      const nParcelas=parseInt(document.getElementById('esNParcelas').value)||0;
+      const primeiraParcela=document.getElementById('esPrimeiraParcela').value;
+      if(!nParcelas||nParcelas<1){Toast.show('Informe o número de parcelas','error');return;}
+      if(!primeiraParcela){Toast.show('Informe a 1ª parcela','error');return;}
+      saida.nParcelas=nParcelas;saida.primeiraParcela=primeiraParcela;
+    }else{saida.nParcelas=1;}
+    const saidas=DB.get('saidas')||[];saidas.push(saida);DB.set('saidas',saidas);
+    Toast.show(`Saída "${descricao}" registrada`,'success');
+    reconstruirFiltros();renderSaidasTable();atualizarStatsSaida();renderControle();
+  }
+
+  /* Limpa formulário */
+  ['esRef','esDescricao','esValor','esNParcelas','esPrimeiraParcela'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('esForma').value='avista';
+  document.getElementById('esParcelaFields').classList.remove('visible');
+  onEsTipoLancamentoChange();
 }
+
+/* Stat card combinado: saldo + confirmados */
+function atualizarStatsES(){
+  const srchE=(document.getElementById('filterEntrada')?document.getElementById('filterEntrada').value:'').toLowerCase();
+  const srchS=(document.getElementById('filterSaida')?document.getElementById('filterSaida').value:'').toLowerCase();
+  let eRows=expandirEntradas(DB.get('entradas')||[],filtroAno,filtroRef);
+  let sRows=expandirSaidas(DB.get('saidas')||[],filtroAno,filtroRef);
+  if(srchE)eRows=eRows.filter(r=>(r.descricao||'').toLowerCase().includes(srchE)||(r.tipo||'').toLowerCase().includes(srchE));
+  if(srchS)sRows=sRows.filter(r=>(r.descricao||'').toLowerCase().includes(srchS)||(r.tipo||'').toLowerCase().includes(srchS));
+  const totalE=eRows.reduce((s,r)=>s+r.valorExib,0);
+  const totalS=sRows.reduce((s,r)=>s+r.valorExib,0);
+  const saldo=totalE-totalS;
+  let pagoE=0,pagoS=0;
+  eRows.forEach(r=>{const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);if((r.pagos||{})[key])pagoE+=r.valorExib;});
+  sRows.forEach(r=>{const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);if((r.pagos||{})[key])pagoS+=r.valorExib;});
+  const saldoEl=document.getElementById('esStatSaldo');
+  if(saldoEl){
+    saldoEl.textContent=saldo>=0?Fmt.brl(saldo):`−${Fmt.brl(Math.abs(saldo))}`;
+    saldoEl.className='stat-value '+(saldo>=0?'income':'expense');
+  }
+  const cardEl=document.getElementById('esSaldoCard');
+  if(cardEl)cardEl.className='stat-card '+(saldo>=0?'green':'red');
+  const confEl=document.getElementById('esStatConfirmado');
+  if(confEl)confEl.textContent=Fmt.brl(pagoE-pagoS);
+}
+
+/* Mantém retrocompatibilidade das funções antigas (usadas nas modais) */
+function onSaidaFormaChange(){onEsFormaChange();}
+function onEntradaFormaChange(){onEsFormaChange();}
+function confirmarInsercaoSaida(){confirmarInsercaoES();}
+function confirmarInsercaoEntrada(){confirmarInsercaoES();}
 
 let pendingDeleteSaidaId=null;
 function pedirExcluirSaida(id){const s=(DB.get('saidas')||[]).find(x=>x.id===id);if(!s)return;pendingDeleteSaidaId=id;document.getElementById('deleteSaidaDesc').textContent=s.descricao||'registro';document.getElementById('modalExcluirSaida').classList.remove('hidden');}
@@ -687,22 +780,9 @@ function atualizarStatsEntrada(){
   if(srch)rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(srch)||(r.tipo||'').toLowerCase().includes(srch)||Fmt.ref(r.parcelaRef).toLowerCase().includes(srch));
   let total=0,pendente=0,pago=0;
   rows.forEach(r=>{total+=r.valorExib;const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);const pg=(r.pagos||{})[key]||false;if(pg)pago+=r.valorExib;else pendente+=r.valorExib;});
-  document.getElementById('entradaStatTotal').textContent=Fmt.brl(total);
-  document.getElementById('entradaStatPendente').textContent=Fmt.brl(pendente);
-  document.getElementById('entradaStatPago').textContent=Fmt.brl(pago);
-}
-
-function onEntradaFormaChange(){const parcelado=document.getElementById('entradaForma').value==='parcelado';document.getElementById('entradaParcelaFields').classList.toggle('visible',parcelado);document.getElementById('entradaValorLabel').textContent=parcelado?'Valor de cada parcela':'Valor Recebido';}
-
-function confirmarInsercaoEntrada(){
-  const ref=document.getElementById('entradaRef').value;const tipo=document.getElementById('entradaTipoConta').value;const descricao=document.getElementById('entradaDescricao').value.trim();const forma=document.getElementById('entradaForma').value;const valor=Fmt.parse(document.getElementById('entradaValor').value);
-  if(!ref){Toast.show('Selecione a referência','error');return;}if(!tipo){Toast.show('Selecione o tipo de conta','error');return;}if(!descricao){Toast.show('Informe a descrição','error');return;}if(!valor){Toast.show('Informe o valor','error');return;}
-  const entrada={id:Fmt.uid(),ref,tipo,descricao,forma,valor,pagos:{}};
-  if(forma==='parcelado'){const nParcelas=parseInt(document.getElementById('entradaNParcelas').value)||0;const primeiraParcela=document.getElementById('entradaPrimeiraParcela').value;if(!nParcelas||nParcelas<1){Toast.show('Informe o número de parcelas','error');return;}if(!primeiraParcela){Toast.show('Informe a 1ª parcela','error');return;}entrada.nParcelas=nParcelas;entrada.primeiraParcela=primeiraParcela;}else{entrada.nParcelas=1;}
-  const entradas=DB.get('entradas')||[];entradas.push(entrada);DB.set('entradas',entradas);
-  ['entradaRef','entradaDescricao','entradaValor','entradaNParcelas','entradaPrimeiraParcela'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('entradaForma').value='avista';document.getElementById('entradaParcelaFields').classList.remove('visible');document.getElementById('entradaValorLabel').textContent='Valor Recebido';
-  reconstruirFiltros();renderEntradasTable();atualizarStatsEntrada();renderControle();Toast.show(`Entrada "${descricao}" registrada`,'success');
+  const elTotal=document.getElementById('entradaStatTotal');if(elTotal)elTotal.textContent=Fmt.brl(total);
+  const elPend=document.getElementById('entradaStatPendente');if(elPend)elPend.textContent=Fmt.brl(pendente);
+  atualizarStatsES();
 }
 
 let pendingDeleteEntradaId=null;
@@ -1284,7 +1364,7 @@ function removerCriterio(i){const crit=DB.get('criterios')||[];const nome=crit[i
 /* ════════════════════════════════════════════
    TIPOS DE CONTA
 ════════════════════════════════════════════ */
-function renderTiposConta(){const tipos=DB.get('tiposConta')||[];document.getElementById('tiposContaEmpty').style.display=tipos.length?'none':'block';document.getElementById('tiposContaList').innerHTML=tipos.map((t,i)=>`<div class="criteria-tag"><span>${t}</span><button class="criteria-remove" onclick="removerTipoConta(${i})">✕</button></div>`).join('');const opts=tipos.length?tipos.map(t=>`<option value="${t}">${t}</option>`).join(''):'<option value="">Nenhum tipo cadastrado</option>';['saidaTipoConta','entradaTipoConta'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});}
+function renderTiposConta(){const tipos=DB.get('tiposConta')||[];document.getElementById('tiposContaEmpty').style.display=tipos.length?'none':'block';document.getElementById('tiposContaList').innerHTML=tipos.map((t,i)=>`<div class="criteria-tag"><span>${t}</span><button class="criteria-remove" onclick="removerTipoConta(${i})">✕</button></div>`).join('');const opts=tipos.length?tipos.map(t=>`<option value="${t}">${t}</option>`).join(''):'<option value="">Nenhum tipo cadastrado</option>';['esTipoConta'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});}
 function adicionarTipoConta(){const el=document.getElementById('tipoContaInput'),val=el.value.trim();if(!val){Toast.show('Digite o nome do tipo','error');return;}const tipos=DB.get('tiposConta')||[];if(tipos.includes(val)){Toast.show('Tipo já existe','error');return;}tipos.push(val);DB.set('tiposConta',tipos);el.value='';renderTiposConta();Toast.show(`Tipo "${val}" adicionado`,'success');}
 function removerTipoConta(i){const tipos=DB.get('tiposConta')||[];const nome=tipos[i];tipos.splice(i,1);DB.set('tiposConta',tipos);renderTiposConta();Toast.show(`Tipo "${nome}" removido`,'info');}
 
@@ -1420,7 +1500,7 @@ async function init() {
   document.getElementById('topbarDate').textContent = now.toLocaleDateString('pt-BR', {weekday:'short',day:'2-digit',month:'short',year:'numeric'});
 
   const ym = Fmt.nowYM();
-  ['insertRef','saidaRef','saidaPrimeiraParcela','entradaRef','entradaPrimeiraParcela','investRef'].forEach(id => {
+  ['insertRef','esRef','esPrimeiraParcela','investRef'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = ym;
   });
