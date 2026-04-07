@@ -481,10 +481,10 @@ function atualizarStats(){
 }
 
 /* ════════════════════════════════════════════
-   ABA SAÍDAS
+   ABA ENTRADAS / SAÍDAS — tabela unificada
 ════════════════════════════════════════════ */
-const saidaSortSt={col:'ref',dir:1};
-let editingSaidaId=null;
+const esSortSt={col:'ref',dir:1};
+let editingESId=null;   // {id, natureza}  natureza='entrada'|'saida'
 
 function expandirSaidas(saidas,ano,ref){
   const rows=[];
@@ -495,87 +495,192 @@ function expandirSaidas(saidas,ano,ref){
   return rows;
 }
 
-function sortSaida(col){if(saidaSortSt.col===col)saidaSortSt.dir*=-1;else{saidaSortSt.col=col;saidaSortSt.dir=1;}document.getElementById('saidasTable').querySelectorAll('thead th').forEach(th=>{th.classList.toggle('sorted',th.dataset.col===col);if(th.querySelector('.sort-icon'))th.querySelector('.sort-icon').textContent=th.dataset.col===col?(saidaSortSt.dir===1?'↑':'↓'):'↕';});renderSaidasTable();}
+function expandirEntradas(entradas,ano,ref){
+  const rows=[];
+  entradas.forEach(e=>{
+    if(e.forma==='avista'){const r=e.ref;const ok=ref?r===ref:(ano?r.startsWith(ano+'-'):true);if(ok)rows.push({...e,parcelaNum:null,parcelaRef:r,parcelaTotal:1,valorExib:e.valor,_parcelaIdx:'av'});}
+    else{for(let i=0;i<(e.nParcelas||1);i++){const pr=Fmt.addMonths(e.primeiraParcela,i);const ok=ref?pr===ref:(ano?pr.startsWith(ano+'-'):true);if(ok)rows.push({...e,parcelaNum:i+1,parcelaRef:pr,parcelaTotal:e.nParcelas,valorExib:e.valor,_parcelaIdx:i});}}
+  });
+  return rows;
+}
 
-function renderSaidasTable(){
-  const tbody=document.getElementById('saidasBody');
-  const srch=document.getElementById('filterSaida').value.toLowerCase();
-  let rows=expandirSaidas(DB.get('saidas')||[],filtroAno,filtroRef);
+function sortES(col){
+  if(esSortSt.col===col)esSortSt.dir*=-1;else{esSortSt.col=col;esSortSt.dir=1;}
+  document.getElementById('esTable').querySelectorAll('thead th').forEach(th=>{
+    th.classList.toggle('sorted',th.dataset.col===col);
+    if(th.querySelector('.sort-icon'))th.querySelector('.sort-icon').textContent=th.dataset.col===col?(esSortSt.dir===1?'\u2191':'\u2193'):'\u2195';
+  });
+  renderESTable();
+}
+
+/* Aliases mantidos para compatibilidade com Controle e Resumo */
+function renderSaidasTable(){renderESTable();}
+function renderEntradasTable(){renderESTable();}
+
+function renderESTable(){
+  const tbody=document.getElementById('esBody');
+  if(!tbody)return;
+  const srch=(document.getElementById('filterES')?document.getElementById('filterES').value:'').toLowerCase();
+  const cfRef   =cf('cfESRef');
+  const cfNatEl =document.getElementById('cfESNatureza');
+  const cfNat   =cfNatEl?cfNatEl.value:'';
+  const cfTipo  =cf('cfESTipo');
+  const cfDesc  =cf('cfESDesc');
+  const cfVal   =cf('cfESValor');
+  const cfStEl  =document.getElementById('cfESStatus');
+  const cfStatus=cfStEl?cfStEl.value:'';
+
+  let eRows=expandirEntradas(DB.get('entradas')||[],filtroAno,filtroRef).map(r=>({...r,_natureza:'entrada'}));
+  let sRows=expandirSaidas (DB.get('saidas')  ||[],filtroAno,filtroRef).map(r=>({...r,_natureza:'saida'}));
+  let rows=[...eRows,...sRows];
+
   if(srch)rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(srch)||(r.tipo||'').toLowerCase().includes(srch)||Fmt.ref(r.parcelaRef).toLowerCase().includes(srch));
-  const cfSRef=cf('cfSaidaRef'),cfSTipo=cf('cfSaidaTipo'),cfSDesc=cf('cfSaidaDesc'),cfSVal=cf('cfSaidaValor');
-  if(cfSRef)  rows=rows.filter(r=>Fmt.ref(r.parcelaRef).toLowerCase().includes(cfSRef));
-  if(cfSTipo) rows=rows.filter(r=>(r.tipo||'').toLowerCase().includes(cfSTipo));
-  if(cfSDesc) rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(cfSDesc));
-  if(cfSVal)  rows=rows.filter(r=>Fmt.brl(r.valorExib).toLowerCase().includes(cfSVal));
-  const{col,dir}=saidaSortSt;
-  rows.sort((a,b)=>{let av,bv;if(col==='ref')av=a.parcelaRef,bv=b.parcelaRef;else if(col==='tipo')av=a.tipo,bv=b.tipo;else if(col==='descricao')av=a.descricao,bv=b.descricao;else if(col==='valor')av=a.valor,bv=b.valor;else av=a.parcelaRef,bv=b.parcelaRef;return av<bv?-dir:av>bv?dir:0;});
-  document.getElementById('saidaBadge').textContent=rows.length+' registro'+(rows.length!==1?'s':'');
-  atualizarStatsSaida();
-  if(!rows.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="7">Nenhuma saída registrada.</td></tr>`;return;}
+  if(cfRef)   rows=rows.filter(r=>Fmt.ref(r.parcelaRef).toLowerCase().includes(cfRef));
+  if(cfNat)   rows=rows.filter(r=>r._natureza===cfNat);
+  if(cfTipo)  rows=rows.filter(r=>(r.tipo||'').toLowerCase().includes(cfTipo));
+  if(cfDesc)  rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(cfDesc));
+  if(cfVal)   rows=rows.filter(r=>Fmt.brl(r.valorExib).toLowerCase().includes(cfVal));
+  if(cfStatus){
+    rows=rows.filter(r=>{
+      const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);
+      const pago=(r.pagos||{})[key]||false;
+      return cfStatus==='pago'?pago:!pago;
+    });
+  }
+
+  const{col,dir}=esSortSt;
+  rows.sort((a,b)=>{
+    let av,bv;
+    if(col==='ref')       av=a.parcelaRef,bv=b.parcelaRef;
+    else if(col==='natureza') av=a._natureza,bv=b._natureza;
+    else if(col==='tipo') av=a.tipo,bv=b.tipo;
+    else if(col==='descricao') av=a.descricao,bv=b.descricao;
+    else if(col==='valor') av=a.valorExib,bv=b.valorExib;
+    else av=a.parcelaRef,bv=b.parcelaRef;
+    return av<bv?-dir:av>bv?dir:0;
+  });
+
+  const badgeEl=document.getElementById('esBadge');
+  if(badgeEl)badgeEl.textContent=rows.length+' registro'+(rows.length!==1?'s':'');
+
+  atualizarStatsES(eRows,sRows);
+
+  if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="8">Nenhum lan\u00e7amento encontrado.</td></tr>';return;}
+
   const tipos=DB.get('tiposConta')||[];
   tbody.innerHTML=rows.map(r=>{
-    if(r.id===editingSaidaId&&(r.parcelaNum===1||r.parcelaNum===null))return buildSaidaEditRow(r,tipos);
-    if(r.id===editingSaidaId)return buildSaidaReadRow(r,true);
-    return buildSaidaReadRow(r,false);
+    const isEdit=editingESId&&editingESId.id===r.id&&editingESId.natureza===r._natureza;
+    const isPrimeira=(r.parcelaNum===1||r.parcelaNum===null);
+    if(isEdit&&isPrimeira)return buildESEditRow(r,tipos);
+    if(isEdit)return buildESReadRow(r,true);
+    return buildESReadRow(r,false);
   }).join('');
 }
-function buildSaidaReadRow(r,inEdit){
-  const parcelaStr=r.parcelaNum!=null?`${r.parcelaNum}/${r.parcelaTotal}`:'—';
-  const pago=(r.pagos||{})[r._parcelaIdx]||false;
-  const sc=pago?'pago':'pendente',st=pago?'✔ Pago':'● Pendente';
-  const acoes=inEdit?'':`<div class="actions-cell"><button class="btn-icon edit" onclick="iniciarEdicaoSaida('${r.id}')" title="Editar">✎</button><button class="btn-icon danger" onclick="pedirExcluirSaida('${r.id}')" title="Excluir">✕</button></div>`;
-  return`<tr><td class="td-ref">${Fmt.ref(r.parcelaRef)}</td><td><span class="td-tag">${r.tipo||'—'}</span></td><td style="font-size:.84rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.descricao||'—'}</td><td class="td-mono">${parcelaStr}</td><td class="td-value-expense">${Fmt.brl(r.valorExib)}</td><td><button class="status-btn ${sc}" onclick="toggleStatus('${r.id}','${r._parcelaIdx}')">${st}<span class="status-dot"></span></button></td><td>${acoes}</td></tr>`;
+
+function buildESReadRow(r,inEdit){
+  const parcelaStr=r.parcelaNum!=null?`${r.parcelaNum}/${r.parcelaTotal}`:'\u2014';
+  const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);
+  const pago=(r.pagos||{})[key]||false;
+  const isEntrada=r._natureza==='entrada';
+  const sc=pago?'pago':'pendente';
+  const st=pago?(isEntrada?'\u2714 Recebido':'\u2714 Pago'):(isEntrada?'\u25cf Pendente':'\u25cf Pendente');
+  const valClass=isEntrada?'td-value-income':'td-value-expense';
+  const valStr=isEntrada?`+${Fmt.brl(r.valorExib)}`:`\u2212${Fmt.brl(r.valorExib)}`;
+  const natBadge=isEntrada
+    ?'<span class="nature-badge receita">\u2191 Entrada</span>'
+    :'<span class="nature-badge despesa">\u2193 Sa\u00edda</span>';
+  const toggleFn=isEntrada?`toggleStatusEntrada('${r.id}','${r._parcelaIdx}')`:`toggleStatus('${r.id}','${r._parcelaIdx}')`;
+  const editFn=isEntrada?`iniciarEdicaoES('${r.id}','entrada')`:`iniciarEdicaoES('${r.id}','saida')`;
+  const delFn=isEntrada?`pedirExcluirEntrada('${r.id}')`:`pedirExcluirSaida('${r.id}')`;
+  const acoes=inEdit?'':`<div class="actions-cell"><button class="btn-icon edit" onclick="${editFn}" title="Editar">\u270e</button><button class="btn-icon danger" onclick="${delFn}" title="Excluir">\u2715</button></div>`;
+  return`<tr><td class="td-ref">${Fmt.ref(r.parcelaRef)}</td><td>${natBadge}</td><td><span class="td-tag">${r.tipo||'\u2014'}</span></td><td style="font-size:.84rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.descricao||'\u2014'}</td><td class="td-mono">${parcelaStr}</td><td class="${valClass}" style="font-family:var(--font-mono);font-weight:500;">${valStr}</td><td><button class="status-btn ${sc}" onclick="${toggleFn}">${st}<span class="status-dot"></span></button></td><td>${acoes}</td></tr>`;
 }
-function buildSaidaEditRow(r,tipos){
+
+function buildESEditRow(r,tipos){
   const tipoOpts=tipos.map(t=>`<option value="${t}"${t===r.tipo?' selected':''}>${t}</option>`).join('');
   const isParc=r.forma==='parcelado';
-  const pago=(r.pagos||{})[r._parcelaIdx]||false;
-  const sc=pago?'pago':'pendente',st=pago?'✔ Pago':'● Pendente';
+  const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);
+  const pago=(r.pagos||{})[key]||false;
+  const isEntrada=r._natureza==='entrada';
+  const sc=pago?'pago':'pendente';
+  const st=pago?(isEntrada?'\u2714 Recebido':'\u2714 Pago'):'\u25cf Pendente';
+  const toggleFn=isEntrada?`toggleStatusEntrada('${r.id}','${r._parcelaIdx}')`:`toggleStatus('${r.id}','${r._parcelaIdx}')`;
+  const natBadge=isEntrada?'<span class="nature-badge receita">\u2191 Entrada</span>':'<span class="nature-badge despesa">\u2193 Sa\u00edda</span>';
   const parcelaCell=isParc
-    ?`<div style="display:flex;gap:4px;align-items:center;"><input class="inline-input" id="es_nparc" value="${r.nParcelas||1}" style="width:44px;text-align:center;" oninput="this.value=this.value.replace(/\\D/g,'')" onkeydown="handleInlineSaidaKey(event,'${r.id}')"/><span style="color:var(--text-muted);font-size:.75rem;">parc.</span></div>`
-    :'—';
-  return`<tr class="row-editing"><td class="td-ref">${Fmt.ref(r.parcelaRef)}</td><td><select class="inline-select" id="es_tipo" style="min-width:100px;">${tipoOpts}</select></td><td><input class="inline-input" id="es_desc" value="${(r.descricao||'').replace(/"/g,'&quot;')}" style="min-width:110px;" onkeydown="handleInlineSaidaKey(event,'${r.id}')"/></td><td class="td-mono">${parcelaCell}</td><td><div class="inline-curr"><span class="inline-curr-pfx">R$</span><input class="inline-input" id="es_val" value="${Fmt.toInput(r.valor)}" oninput="maskCurrency(this)" onkeydown="handleInlineSaidaKey(event,'${r.id}')" style="min-width:80px;"/></div></td><td><button class="status-btn ${sc}" onclick="toggleStatus('${r.id}','${r._parcelaIdx}')">${st}<span class="status-dot"></span></button></td><td><div class="actions-cell"><button class="btn-icon confirm" onclick="salvarSaida('${r.id}')">✔</button><button class="btn-icon cancel-edit" onclick="cancelarSaida()">✕</button></div></td></tr>`;
+    ?`<div style="display:flex;gap:4px;align-items:center;"><input class="inline-input" id="esi_nparc" value="${r.nParcelas||1}" style="width:44px;text-align:center;" oninput="this.value=this.value.replace(/\\D/g,'')" onkeydown="handleInlineESKey(event,'${r.id}','${r._natureza}')"/><span style="color:var(--text-muted);font-size:.75rem;">parc.</span></div>`
+    :'\u2014';
+  return`<tr class="row-editing"><td class="td-ref">${Fmt.ref(r.parcelaRef)}</td><td>${natBadge}</td><td><select class="inline-select" id="esi_tipo" style="min-width:100px;">${tipoOpts}</select></td><td><input class="inline-input" id="esi_desc" value="${(r.descricao||'').replace(/"/g,'&quot;')}" style="min-width:110px;" onkeydown="handleInlineESKey(event,'${r.id}','${r._natureza}')"/></td><td class="td-mono">${parcelaCell}</td><td><div class="inline-curr"><span class="inline-curr-pfx">R$</span><input class="inline-input" id="esi_val" value="${Fmt.toInput(r.valor)}" oninput="maskCurrency(this)" onkeydown="handleInlineESKey(event,'${r.id}','${r._natureza}')" style="min-width:80px;"/></div></td><td><button class="status-btn ${sc}" onclick="${toggleFn}">${st}<span class="status-dot"></span></button></td><td><div class="actions-cell"><button class="btn-icon confirm" onclick="salvarES('${r.id}','${r._natureza}')">\u2714</button><button class="btn-icon cancel-edit" onclick="cancelarES()">\u2715</button></div></td></tr>`;
 }
-function iniciarEdicaoSaida(id){editingSaidaId=id;renderSaidasTable();setTimeout(()=>{const el=document.getElementById('es_desc');if(el)el.focus();},40);}
-function cancelarSaida(){editingSaidaId=null;renderSaidasTable();}
-function salvarSaida(id){
-  const tipo=document.getElementById('es_tipo').value;
-  const descricao=document.getElementById('es_desc').value.trim();
-  const valor=Fmt.parse(document.getElementById('es_val').value);
-  if(!descricao){Toast.show('Informe a descrição','error');return;}
+
+function iniciarEdicaoES(id,natureza){editingESId={id,natureza};renderESTable();setTimeout(()=>{const el=document.getElementById('esi_desc');if(el)el.focus();},40);}
+function iniciarEdicaoSaida(id){iniciarEdicaoES(id,'saida');}
+function iniciarEdicaoEntrada(id){iniciarEdicaoES(id,'entrada');}
+function cancelarES(){editingESId=null;renderESTable();}
+function cancelarSaida(){cancelarES();}
+function cancelarEntrada(){cancelarES();}
+
+function salvarES(id,natureza){
+  const tipo=document.getElementById('esi_tipo').value;
+  const descricao=document.getElementById('esi_desc').value.trim();
+  const valor=Fmt.parse(document.getElementById('esi_val').value);
+  if(!descricao){Toast.show('Informe a descri\u00e7\u00e3o','error');return;}
   if(!valor){Toast.show('Informe o valor','error');return;}
-  const saidas=DB.get('saidas')||[];
-  const idx=saidas.findIndex(s=>s.id===id);
+  const dbKey=natureza==='entrada'?'entradas':'saidas';
+  const arr=DB.get(dbKey)||[];
+  const idx=arr.findIndex(s=>s.id===id);
   if(idx<0)return;
-  saidas[idx].tipo=tipo;saidas[idx].descricao=descricao;saidas[idx].valor=valor;
-  const npEl=document.getElementById('es_nparc');
-  if(npEl){const np=parseInt(npEl.value)||1;if(np!==saidas[idx].nParcelas){saidas[idx].nParcelas=np;/* limpa pagos de parcelas excluídas */const pagos=saidas[idx].pagos||{};Object.keys(pagos).forEach(k=>{if(k!=='av'&&parseInt(k)>=np)delete pagos[k];});saidas[idx].pagos=pagos;}}
-  DB.set('saidas',saidas);editingSaidaId=null;reconstruirFiltros();renderSaidasTable();atualizarStatsSaida();renderControle();
-  Toast.show('Saída atualizada','success');
+  arr[idx].tipo=tipo;arr[idx].descricao=descricao;arr[idx].valor=valor;
+  const npEl=document.getElementById('esi_nparc');
+  if(npEl){const np=parseInt(npEl.value)||1;if(np!==arr[idx].nParcelas){arr[idx].nParcelas=np;const pagos=arr[idx].pagos||{};Object.keys(pagos).forEach(k=>{if(k!=='av'&&parseInt(k)>=np)delete pagos[k];});arr[idx].pagos=pagos;}}
+  DB.set(dbKey,arr);editingESId=null;reconstruirFiltros();renderESTable();atualizarStatsES();renderControle();
+  Toast.show(natureza==='entrada'?'Entrada atualizada':'Sa\u00edda atualizada','success');
 }
-function handleInlineSaidaKey(e,id){if(e.key==='Enter'){e.preventDefault();salvarSaida(id);}if(e.key==='Escape')cancelarSaida();}
+function salvarSaida(id){salvarES(id,'saida');}
+function salvarEntrada(id){salvarES(id,'entrada');}
+function handleInlineESKey(e,id,nat){if(e.key==='Enter'){e.preventDefault();salvarES(id,nat);}if(e.key==='Escape')cancelarES();}
+function handleInlineSaidaKey(e,id){handleInlineESKey(e,id,'saida');}
+function handleInlineEntradaKey(e,id){handleInlineESKey(e,id,'entrada');}
 
 function toggleStatus(id,parcelaIdx){
   const saidas=DB.get('saidas')||[];const idx=saidas.findIndex(s=>s.id===id);if(idx<0)return;
   if(!saidas[idx].pagos)saidas[idx].pagos={};
   const key=parcelaIdx==='av'?'av':parseInt(parcelaIdx);
   saidas[idx].pagos[key]=!saidas[idx].pagos[key];
-  DB.set('saidas',saidas);renderSaidasTable();atualizarStatsSaida();
+  DB.set('saidas',saidas);renderESTable();
   Toast.show(saidas[idx].pagos[key]?'Marcado como pago':'Marcado como pendente','info');
 }
-
-function atualizarStatsSaida(){
-  const srch=(document.getElementById('filterSaida')?document.getElementById('filterSaida').value:'').toLowerCase();
-  let rows=expandirSaidas(DB.get('saidas')||[],filtroAno,filtroRef);
-  if(srch)rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(srch)||(r.tipo||'').toLowerCase().includes(srch)||Fmt.ref(r.parcelaRef).toLowerCase().includes(srch));
-  let total=0,pendente=0,pago=0;
-  rows.forEach(r=>{total+=r.valorExib;const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);const pg=(r.pagos||{})[key]||false;if(pg)pago+=r.valorExib;else pendente+=r.valorExib;});
-  const elTotal=document.getElementById('saidaStatTotal');if(elTotal)elTotal.textContent=Fmt.brl(total);
-  const elPend=document.getElementById('saidaStatPendente');if(elPend)elPend.textContent=Fmt.brl(pendente);
-  atualizarStatsES();
+function toggleStatusEntrada(id,parcelaIdx){
+  const entradas=DB.get('entradas')||[];const idx=entradas.findIndex(e=>e.id===id);if(idx<0)return;
+  if(!entradas[idx].pagos)entradas[idx].pagos={};
+  const key=parcelaIdx==='av'?'av':parseInt(parcelaIdx);
+  entradas[idx].pagos[key]=!entradas[idx].pagos[key];DB.set('entradas',entradas);renderESTable();
+  Toast.show(entradas[idx].pagos[key]?'Marcado como recebido':'Marcado como pendente','info');
 }
 
-/* ── Painel unificado Entradas/Saídas ── */
+function atualizarStatsSaida(){atualizarStatsES();}
+function atualizarStatsEntrada(){atualizarStatsES();}
+
+function atualizarStatsES(eRows,sRows){
+  if(!eRows)eRows=expandirEntradas(DB.get('entradas')||[],filtroAno,filtroRef);
+  if(!sRows)sRows=expandirSaidas(DB.get('saidas')||[],filtroAno,filtroRef);
+  const totalE=eRows.reduce((s,r)=>s+r.valorExib,0);
+  const totalS=sRows.reduce((s,r)=>s+r.valorExib,0);
+  const saldo=totalE-totalS;
+  let pagoE=0,pendE=0,pagoS=0,pendS=0;
+  eRows.forEach(r=>{const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);if((r.pagos||{})[key])pagoE+=r.valorExib;else pendE+=r.valorExib;});
+  sRows.forEach(r=>{const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);if((r.pagos||{})[key])pagoS+=r.valorExib;else pendS+=r.valorExib;});
+  const g=id=>document.getElementById(id);
+  if(g('entradaStatTotal'))g('entradaStatTotal').textContent=Fmt.brl(totalE);
+  if(g('saidaStatTotal'))  g('saidaStatTotal').textContent=Fmt.brl(totalS);
+  if(g('entradaStatPendente'))g('entradaStatPendente').textContent=Fmt.brl(pendE);
+  if(g('saidaStatPendente'))  g('saidaStatPendente').textContent=Fmt.brl(pendS);
+  const saldoEl=g('esStatSaldo');
+  if(saldoEl){saldoEl.textContent=saldo>=0?Fmt.brl(saldo):`\u2212${Fmt.brl(Math.abs(saldo))}`;saldoEl.className='stat-value '+(saldo>=0?'income':'expense');}
+  const cardEl=g('esSaldoCard');if(cardEl)cardEl.className='stat-card '+(saldo>=0?'green':'red');
+  const confEl=g('esStatConfirmado');if(confEl)confEl.textContent=Fmt.brl(pagoE-pagoS);
+}
+
+/* Painel unificado Entradas/Saidas */
 function onEsTipoLancamentoChange(){
   const tipo=document.getElementById('esTipoLancamento').value;
   const isEntrada=tipo==='entrada';
@@ -587,7 +692,6 @@ function onEsTipoLancamentoChange(){
   const btn=document.getElementById('esBtnConfirmar');
   const btnLabel=document.getElementById('esBtnLabel');
   const descEl=document.getElementById('esDescricao');
-
   if(isEntrada){
     icon.style.background='rgba(0,201,122,.15)';icon.style.color='var(--income)';
     icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
@@ -599,25 +703,19 @@ function onEsTipoLancamentoChange(){
   } else {
     icon.style.background='rgba(255,77,106,.15)';icon.style.color='var(--expense)';
     icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 16 12 21 17 16"/><line x1="12" y1="21" x2="12" y2="9"/></svg>';
-    title.textContent='Registrar Saída';sub.textContent='Adicionar nova despesa';
+    title.textContent='Registrar Sa\u00edda';sub.textContent='Adicionar nova despesa';
     formaLabel.textContent='Forma de Pagamento';
     valorLabel.textContent=document.getElementById('esForma').value==='parcelado'?'Valor de cada parcela':'Valor Pago';
-    btn.style.background='var(--expense)';btnLabel.textContent='Confirmar Saída';
+    btn.style.background='var(--expense)';btnLabel.textContent='Confirmar Sa\u00edda';
     descEl.placeholder='Ex: Conta de luz, Nubank...';
   }
 }
-
 function onEsFormaChange(){
   const parcelado=document.getElementById('esForma').value==='parcelado';
   document.getElementById('esParcelaFields').classList.toggle('visible',parcelado);
   const tipo=document.getElementById('esTipoLancamento').value;
-  if(tipo==='entrada'){
-    document.getElementById('esValorLabel').textContent=parcelado?'Valor de cada parcela':'Valor Recebido';
-  } else {
-    document.getElementById('esValorLabel').textContent=parcelado?'Valor de cada parcela':'Valor Pago';
-  }
+  document.getElementById('esValorLabel').textContent=parcelado?'Valor de cada parcela':(tipo==='entrada'?'Valor Recebido':'Valor Pago');
 }
-
 function confirmarInsercaoES(){
   const tipo=document.getElementById('esTipoLancamento').value;
   const ref=document.getElementById('esRef').value;
@@ -625,70 +723,27 @@ function confirmarInsercaoES(){
   const descricao=document.getElementById('esDescricao').value.trim();
   const forma=document.getElementById('esForma').value;
   const valor=Fmt.parse(document.getElementById('esValor').value);
-  if(!ref){Toast.show('Selecione a referência','error');return;}
+  if(!ref){Toast.show('Selecione a refer\u00eancia','error');return;}
   if(!tipoConta){Toast.show('Selecione o tipo de conta','error');return;}
-  if(!descricao){Toast.show('Informe a descrição','error');return;}
+  if(!descricao){Toast.show('Informe a descri\u00e7\u00e3o','error');return;}
   if(!valor){Toast.show('Informe o valor','error');return;}
-
-  if(tipo==='entrada'){
-    const entrada={id:Fmt.uid(),ref,tipo:tipoConta,descricao,forma,valor,pagos:{}};
-    if(forma==='parcelado'){
-      const nParcelas=parseInt(document.getElementById('esNParcelas').value)||0;
-      const primeiraParcela=document.getElementById('esPrimeiraParcela').value;
-      if(!nParcelas||nParcelas<1){Toast.show('Informe o número de parcelas','error');return;}
-      if(!primeiraParcela){Toast.show('Informe a 1ª parcela','error');return;}
-      entrada.nParcelas=nParcelas;entrada.primeiraParcela=primeiraParcela;
-    }else{entrada.nParcelas=1;}
-    const entradas=DB.get('entradas')||[];entradas.push(entrada);DB.set('entradas',entradas);
-    Toast.show(`Entrada "${descricao}" registrada`,'success');
-    reconstruirFiltros();renderEntradasTable();atualizarStatsEntrada();renderControle();
-  } else {
-    const saida={id:Fmt.uid(),ref,tipo:tipoConta,descricao,forma,valor,pagos:{}};
-    if(forma==='parcelado'){
-      const nParcelas=parseInt(document.getElementById('esNParcelas').value)||0;
-      const primeiraParcela=document.getElementById('esPrimeiraParcela').value;
-      if(!nParcelas||nParcelas<1){Toast.show('Informe o número de parcelas','error');return;}
-      if(!primeiraParcela){Toast.show('Informe a 1ª parcela','error');return;}
-      saida.nParcelas=nParcelas;saida.primeiraParcela=primeiraParcela;
-    }else{saida.nParcelas=1;}
-    const saidas=DB.get('saidas')||[];saidas.push(saida);DB.set('saidas',saidas);
-    Toast.show(`Saída "${descricao}" registrada`,'success');
-    reconstruirFiltros();renderSaidasTable();atualizarStatsSaida();renderControle();
-  }
-
-  /* Limpa formulário */
+  const dbKey=tipo==='entrada'?'entradas':'saidas';
+  const rec={id:Fmt.uid(),ref,tipo:tipoConta,descricao,forma,valor,pagos:{}};
+  if(forma==='parcelado'){
+    const nParcelas=parseInt(document.getElementById('esNParcelas').value)||0;
+    const primeiraParcela=document.getElementById('esPrimeiraParcela').value;
+    if(!nParcelas||nParcelas<1){Toast.show('Informe o n\u00famero de parcelas','error');return;}
+    if(!primeiraParcela){Toast.show('Informe a 1\u00aa parcela','error');return;}
+    rec.nParcelas=nParcelas;rec.primeiraParcela=primeiraParcela;
+  }else{rec.nParcelas=1;}
+  const arr=DB.get(dbKey)||[];arr.push(rec);DB.set(dbKey,arr);
+  Toast.show(`${tipo==='entrada'?'Entrada':'Sa\u00edda'} "${descricao}" registrada`,'success');
   ['esRef','esDescricao','esValor','esNParcelas','esPrimeiraParcela'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('esForma').value='avista';
   document.getElementById('esParcelaFields').classList.remove('visible');
   onEsTipoLancamentoChange();
+  reconstruirFiltros();renderESTable();atualizarStatsES();renderControle();
 }
-
-/* Stat card combinado: saldo + confirmados */
-function atualizarStatsES(){
-  const srchE=(document.getElementById('filterEntrada')?document.getElementById('filterEntrada').value:'').toLowerCase();
-  const srchS=(document.getElementById('filterSaida')?document.getElementById('filterSaida').value:'').toLowerCase();
-  let eRows=expandirEntradas(DB.get('entradas')||[],filtroAno,filtroRef);
-  let sRows=expandirSaidas(DB.get('saidas')||[],filtroAno,filtroRef);
-  if(srchE)eRows=eRows.filter(r=>(r.descricao||'').toLowerCase().includes(srchE)||(r.tipo||'').toLowerCase().includes(srchE));
-  if(srchS)sRows=sRows.filter(r=>(r.descricao||'').toLowerCase().includes(srchS)||(r.tipo||'').toLowerCase().includes(srchS));
-  const totalE=eRows.reduce((s,r)=>s+r.valorExib,0);
-  const totalS=sRows.reduce((s,r)=>s+r.valorExib,0);
-  const saldo=totalE-totalS;
-  let pagoE=0,pagoS=0;
-  eRows.forEach(r=>{const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);if((r.pagos||{})[key])pagoE+=r.valorExib;});
-  sRows.forEach(r=>{const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);if((r.pagos||{})[key])pagoS+=r.valorExib;});
-  const saldoEl=document.getElementById('esStatSaldo');
-  if(saldoEl){
-    saldoEl.textContent=saldo>=0?Fmt.brl(saldo):`−${Fmt.brl(Math.abs(saldo))}`;
-    saldoEl.className='stat-value '+(saldo>=0?'income':'expense');
-  }
-  const cardEl=document.getElementById('esSaldoCard');
-  if(cardEl)cardEl.className='stat-card '+(saldo>=0?'green':'red');
-  const confEl=document.getElementById('esStatConfirmado');
-  if(confEl)confEl.textContent=Fmt.brl(pagoE-pagoS);
-}
-
-/* Mantém retrocompatibilidade das funções antigas (usadas nas modais) */
 function onSaidaFormaChange(){onEsFormaChange();}
 function onEntradaFormaChange(){onEsFormaChange();}
 function confirmarInsercaoSaida(){confirmarInsercaoES();}
@@ -696,98 +751,12 @@ function confirmarInsercaoEntrada(){confirmarInsercaoES();}
 
 let pendingDeleteSaidaId=null;
 function pedirExcluirSaida(id){const s=(DB.get('saidas')||[]).find(x=>x.id===id);if(!s)return;pendingDeleteSaidaId=id;document.getElementById('deleteSaidaDesc').textContent=s.descricao||'registro';document.getElementById('modalExcluirSaida').classList.remove('hidden');}
-function confirmarExclusaoSaida(){DB.set('saidas',(DB.get('saidas')||[]).filter(s=>s.id!==pendingDeleteSaidaId));closeModal('modalExcluirSaida');pendingDeleteSaidaId=null;reconstruirFiltros();renderSaidasTable();atualizarStatsSaida();renderControle();Toast.show('Saída excluída','error');}
-
-/* ════════════════════════════════════════════
-   ABA ENTRADAS
-════════════════════════════════════════════ */
-const entradaSortSt={col:'ref',dir:1};
-let editingEntradaId=null;
-
-function expandirEntradas(entradas,ano,ref){
-  const rows=[];
-  entradas.forEach(e=>{
-    if(e.forma==='avista'){const r=e.ref;const ok=ref?r===ref:(ano?r.startsWith(ano+'-'):true);if(ok)rows.push({...e,parcelaNum:null,parcelaRef:r,parcelaTotal:1,valorExib:e.valor,_parcelaIdx:'av'});}
-    else{for(let i=0;i<(e.nParcelas||1);i++){const pr=Fmt.addMonths(e.primeiraParcela,i);const ok=ref?pr===ref:(ano?pr.startsWith(ano+'-'):true);if(ok)rows.push({...e,parcelaNum:i+1,parcelaRef:pr,parcelaTotal:e.nParcelas,valorExib:e.valor,_parcelaIdx:i});}}
-  });
-  return rows;
-}
-
-function sortEntrada(col){if(entradaSortSt.col===col)entradaSortSt.dir*=-1;else{entradaSortSt.col=col;entradaSortSt.dir=1;}document.getElementById('entradasTable').querySelectorAll('thead th').forEach(th=>{th.classList.toggle('sorted',th.dataset.col===col);if(th.querySelector('.sort-icon'))th.querySelector('.sort-icon').textContent=th.dataset.col===col?(entradaSortSt.dir===1?'↑':'↓'):'↕';});renderEntradasTable();}
-
-function renderEntradasTable(){
-  const tbody=document.getElementById('entradasBody');
-  const srch=document.getElementById('filterEntrada').value.toLowerCase();
-  let rows=expandirEntradas(DB.get('entradas')||[],filtroAno,filtroRef);
-  if(srch)rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(srch)||(r.tipo||'').toLowerCase().includes(srch)||Fmt.ref(r.parcelaRef).toLowerCase().includes(srch));
-  const cfERef=cf('cfEntradaRef'),cfETipo=cf('cfEntradaTipo'),cfEDesc=cf('cfEntradaDesc'),cfEVal=cf('cfEntradaValor');
-  if(cfERef)  rows=rows.filter(r=>Fmt.ref(r.parcelaRef).toLowerCase().includes(cfERef));
-  if(cfETipo) rows=rows.filter(r=>(r.tipo||'').toLowerCase().includes(cfETipo));
-  if(cfEDesc) rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(cfEDesc));
-  if(cfEVal)  rows=rows.filter(r=>Fmt.brl(r.valorExib).toLowerCase().includes(cfEVal));
-  const{col,dir}=entradaSortSt;
-  rows.sort((a,b)=>{let av,bv;if(col==='ref')av=a.parcelaRef,bv=b.parcelaRef;else if(col==='tipo')av=a.tipo,bv=b.tipo;else if(col==='descricao')av=a.descricao,bv=b.descricao;else if(col==='valor')av=a.valor,bv=b.valor;else av=a.parcelaRef,bv=b.parcelaRef;return av<bv?-dir:av>bv?dir:0;});
-  document.getElementById('entradaBadge').textContent=rows.length+' registro'+(rows.length!==1?'s':'');
-  atualizarStatsEntrada();
-  if(!rows.length){tbody.innerHTML=`<tr class="empty-row"><td colspan="7">Nenhuma entrada registrada.</td></tr>`;return;}
-  const tipos=DB.get('tiposConta')||[];
-  tbody.innerHTML=rows.map(r=>{
-    if(r.id===editingEntradaId&&(r.parcelaNum===1||r.parcelaNum===null))return buildEntradaEditRow(r,tipos);
-    if(r.id===editingEntradaId)return buildEntradaReadRow(r,true);
-    return buildEntradaReadRow(r,false);
-  }).join('');
-}
-function buildEntradaReadRow(r,inEdit){
-  const parcelaStr=r.parcelaNum!=null?`${r.parcelaNum}/${r.parcelaTotal}`:'—';
-  const pago=(r.pagos||{})[r._parcelaIdx]||false;
-  const sc=pago?'pago':'pendente',st=pago?'✔ Recebido':'● Pendente';
-  const acoes=inEdit?'':`<div class="actions-cell"><button class="btn-icon edit" onclick="iniciarEdicaoEntrada('${r.id}')" title="Editar">✎</button><button class="btn-icon danger" onclick="pedirExcluirEntrada('${r.id}')" title="Excluir">✕</button></div>`;
-  return`<tr><td class="td-ref">${Fmt.ref(r.parcelaRef)}</td><td><span class="td-tag">${r.tipo||'—'}</span></td><td style="font-size:.84rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.descricao||'—'}</td><td class="td-mono">${parcelaStr}</td><td class="td-value-income">${Fmt.brl(r.valorExib)}</td><td><button class="status-btn ${sc}" onclick="toggleStatusEntrada('${r.id}','${r._parcelaIdx}')">${st}<span class="status-dot"></span></button></td><td>${acoes}</td></tr>`;
-}
-function buildEntradaEditRow(r,tipos){
-  const tipoOpts=tipos.map(t=>`<option value="${t}"${t===r.tipo?' selected':''}>${t}</option>`).join('');
-  const pago=(r.pagos||{})[r._parcelaIdx]||false;
-  const sc=pago?'pago':'pendente',st=pago?'✔ Recebido':'● Pendente';
-  const isEParc=r.forma==='parcelado';
-  const parcelaCellE=isEParc
-    ?`<div style="display:flex;gap:4px;align-items:center;"><input class="inline-input" id="ee2_nparc" value="${r.nParcelas||1}" style="width:44px;text-align:center;" oninput="this.value=this.value.replace(/\\D/g,'')" onkeydown="handleInlineEntradaKey(event,'${r.id}')"/><span style="color:var(--text-muted);font-size:.75rem;">parc.</span></div>`
-    :'—';
-  return`<tr class="row-editing"><td class="td-ref">${Fmt.ref(r.parcelaRef)}</td><td><select class="inline-select" id="ee2_tipo" style="min-width:100px;">${tipoOpts}</select></td><td><input class="inline-input" id="ee2_desc" value="${(r.descricao||'').replace(/"/g,'&quot;')}" style="min-width:110px;" onkeydown="handleInlineEntradaKey(event,'${r.id}')"/></td><td class="td-mono">${parcelaCellE}</td><td><div class="inline-curr"><span class="inline-curr-pfx">R$</span><input class="inline-input" id="ee2_val" value="${Fmt.toInput(r.valor)}" oninput="maskCurrency(this)" onkeydown="handleInlineEntradaKey(event,'${r.id}')" style="min-width:80px;"/></div></td><td><button class="status-btn ${sc}" onclick="toggleStatusEntrada('${r.id}','${r._parcelaIdx}')">${st}<span class="status-dot"></span></button></td><td><div class="actions-cell"><button class="btn-icon confirm" onclick="salvarEntrada('${r.id}')">✔</button><button class="btn-icon cancel-edit" onclick="cancelarEntrada()">✕</button></div></td></tr>`;
-}
-function iniciarEdicaoEntrada(id){editingEntradaId=id;renderEntradasTable();setTimeout(()=>{const el=document.getElementById('ee2_desc');if(el)el.focus();},40);}
-function cancelarEntrada(){editingEntradaId=null;renderEntradasTable();}
-function salvarEntrada(id){
-  const tipo=document.getElementById('ee2_tipo').value;const descricao=document.getElementById('ee2_desc').value.trim();const valor=Fmt.parse(document.getElementById('ee2_val').value);
-  if(!descricao){Toast.show('Informe a descrição','error');return;}if(!valor){Toast.show('Informe o valor','error');return;}
-  const entradas=DB.get('entradas')||[];const idx=entradas.findIndex(e=>e.id===id);if(idx<0)return;
-  entradas[idx].tipo=tipo;entradas[idx].descricao=descricao;entradas[idx].valor=valor;
-  const npElE=document.getElementById('ee2_nparc');
-  if(npElE){const np=parseInt(npElE.value)||1;if(np!==entradas[idx].nParcelas){entradas[idx].nParcelas=np;const pagos=entradas[idx].pagos||{};Object.keys(pagos).forEach(k=>{if(k!=='av'&&parseInt(k)>=np)delete pagos[k];});entradas[idx].pagos=pagos;}}
-  DB.set('entradas',entradas);editingEntradaId=null;reconstruirFiltros();renderEntradasTable();atualizarStatsEntrada();renderControle();Toast.show('Entrada atualizada','success');
-}
-function handleInlineEntradaKey(e,id){if(e.key==='Enter'){e.preventDefault();salvarEntrada(id);}if(e.key==='Escape')cancelarEntrada();}
-
-function toggleStatusEntrada(id,parcelaIdx){
-  const entradas=DB.get('entradas')||[];const idx=entradas.findIndex(e=>e.id===id);if(idx<0)return;
-  if(!entradas[idx].pagos)entradas[idx].pagos={};const key=parcelaIdx==='av'?'av':parseInt(parcelaIdx);
-  entradas[idx].pagos[key]=!entradas[idx].pagos[key];DB.set('entradas',entradas);renderEntradasTable();atualizarStatsEntrada();
-  Toast.show(entradas[idx].pagos[key]?'Marcado como recebido':'Marcado como pendente','info');
-}
-
-function atualizarStatsEntrada(){
-  const srch=(document.getElementById('filterEntrada')?document.getElementById('filterEntrada').value:'').toLowerCase();
-  let rows=expandirEntradas(DB.get('entradas')||[],filtroAno,filtroRef);
-  if(srch)rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(srch)||(r.tipo||'').toLowerCase().includes(srch)||Fmt.ref(r.parcelaRef).toLowerCase().includes(srch));
-  let total=0,pendente=0,pago=0;
-  rows.forEach(r=>{total+=r.valorExib;const key=r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);const pg=(r.pagos||{})[key]||false;if(pg)pago+=r.valorExib;else pendente+=r.valorExib;});
-  const elTotal=document.getElementById('entradaStatTotal');if(elTotal)elTotal.textContent=Fmt.brl(total);
-  const elPend=document.getElementById('entradaStatPendente');if(elPend)elPend.textContent=Fmt.brl(pendente);
-  atualizarStatsES();
-}
+function confirmarExclusaoSaida(){DB.set('saidas',(DB.get('saidas')||[]).filter(s=>s.id!==pendingDeleteSaidaId));closeModal('modalExcluirSaida');pendingDeleteSaidaId=null;reconstruirFiltros();renderESTable();atualizarStatsES();renderControle();Toast.show('Sa\u00edda exclu\u00edda','error');}
 
 let pendingDeleteEntradaId=null;
 function pedirExcluirEntrada(id){const e=(DB.get('entradas')||[]).find(x=>x.id===id);if(!e)return;pendingDeleteEntradaId=id;document.getElementById('deleteEntradaDesc').textContent=e.descricao||'registro';document.getElementById('modalExcluirEntrada').classList.remove('hidden');}
-function confirmarExclusaoEntrada(){DB.set('entradas',(DB.get('entradas')||[]).filter(e=>e.id!==pendingDeleteEntradaId));closeModal('modalExcluirEntrada');pendingDeleteEntradaId=null;reconstruirFiltros();renderEntradasTable();atualizarStatsEntrada();renderControle();Toast.show('Entrada excluída','error');}
+function confirmarExclusaoEntrada(){DB.set('entradas',(DB.get('entradas')||[]).filter(e=>e.id!==pendingDeleteEntradaId));closeModal('modalExcluirEntrada');pendingDeleteEntradaId=null;reconstruirFiltros();renderESTable();atualizarStatsES();renderControle();Toast.show('Entrada exclu\u00edda','error');}
+
 
 /* ════════════════════════════════════════════
    ABA INVESTIMENTO

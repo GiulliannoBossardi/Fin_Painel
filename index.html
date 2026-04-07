@@ -164,62 +164,55 @@
           <div class="stat-card warn"><div class="stat-label">A Pagar</div><div class="stat-value neutral" id="saidaStatPendente">R$ 0,00</div><div class="stat-sub">Saídas pendentes</div></div>
           <div class="stat-card green"><div class="stat-label">Recebido / Pago</div><div class="stat-value income" id="esStatConfirmado">R$ 0,00</div><div class="stat-sub">Entradas recebidas − Saídas pagas</div></div>
         </div>
-        <!-- grid-2: tabelas + painel inserção lado a lado -->
+        <!-- grid-2: tabela unificada + painel inserção lado a lado -->
         <div class="grid-2">
-          <div style="display:flex;flex-direction:column;gap:20px;">
-            <!-- Tabela Entradas -->
+          <div>
+            <!-- Tabela Única Entradas/Saídas -->
             <div class="card">
-              <div class="card-header"><div class="card-title">Tabela de Entradas</div><div class="flex-gap"><span class="card-badge" id="entradaBadge">0 registros</span><input type="text" placeholder="Buscar..." style="width:130px;padding:5px 10px;font-size:.78rem;" id="filterEntrada" oninput="renderEntradasTable()"/></div></div>
-              <div class="table-wrap" style="max-height:380px;">
-                <table id="entradasTable">
-                  <thead><tr>
-                    <th onclick="sortEntrada('ref')" data-col="ref">Ref. <span class="sort-icon">↕</span></th>
-                    <th onclick="sortEntrada('tipo')" data-col="tipo">Tipo <span class="sort-icon">↕</span></th>
-                    <th onclick="sortEntrada('descricao')" data-col="descricao">Descrição <span class="sort-icon">↕</span></th>
-                    <th class="no-sort">Parcela</th>
-                    <th onclick="sortEntrada('valor')" data-col="valor">Valor <span class="sort-icon">↕</span></th>
-                    <th class="no-sort">Status</th>
-                    <th class="no-sort">Ações</th>
-                  </tr></thead>
-                  <tbody id="entradasColFilter">
-                    <tr class="col-filter-row">
-                      <td><input class="col-filter-input" id="cfEntradaRef"  placeholder="Ref..."  oninput="renderEntradasTable()"/></td>
-                      <td><input class="col-filter-input" id="cfEntradaTipo" placeholder="Tipo..." oninput="renderEntradasTable()"/></td>
-                      <td><input class="col-filter-input" id="cfEntradaDesc" placeholder="Desc..." oninput="renderEntradasTable()"/></td>
-                      <td></td>
-                      <td><input class="col-filter-input" id="cfEntradaValor" placeholder="Valor..." oninput="renderEntradasTable()"/></td>
-                      <td></td><td></td>
-                    </tr>
-                  </tbody>
-                  <tbody id="entradasBody"></tbody>
-                </table>
+              <div class="card-header">
+                <div class="card-title">Lançamentos</div>
+                <div class="flex-gap">
+                  <span class="card-badge" id="esBadge">0 registros</span>
+                  <input type="text" placeholder="Buscar..." style="width:130px;padding:5px 10px;font-size:.78rem;" id="filterES" oninput="renderESTable()"/>
+                </div>
               </div>
-            </div>
-            <!-- Tabela Saídas -->
-            <div class="card">
-              <div class="card-header"><div class="card-title">Tabela de Saídas</div><div class="flex-gap"><span class="card-badge" id="saidaBadge">0 registros</span><input type="text" placeholder="Buscar..." style="width:130px;padding:5px 10px;font-size:.78rem;" id="filterSaida" oninput="renderSaidasTable()"/></div></div>
-              <div class="table-wrap" style="max-height:380px;">
-                <table id="saidasTable">
+              <div class="table-wrap" style="max-height:600px;">
+                <table id="esTable">
                   <thead><tr>
-                    <th onclick="sortSaida('ref')" data-col="ref">Ref. <span class="sort-icon">↕</span></th>
-                    <th onclick="sortSaida('tipo')" data-col="tipo">Tipo <span class="sort-icon">↕</span></th>
-                    <th onclick="sortSaida('descricao')" data-col="descricao">Descrição <span class="sort-icon">↕</span></th>
+                    <th onclick="sortES('ref')" data-col="ref">Ref. <span class="sort-icon">↕</span></th>
+                    <th onclick="sortES('natureza')" data-col="natureza">Natureza <span class="sort-icon">↕</span></th>
+                    <th onclick="sortES('tipo')" data-col="tipo">Tipo <span class="sort-icon">↕</span></th>
+                    <th onclick="sortES('descricao')" data-col="descricao">Descrição <span class="sort-icon">↕</span></th>
                     <th class="no-sort">Parcela</th>
-                    <th onclick="sortSaida('valor')" data-col="valor">Valor <span class="sort-icon">↕</span></th>
+                    <th onclick="sortES('valor')" data-col="valor">Valor <span class="sort-icon">↕</span></th>
                     <th class="no-sort">Status</th>
                     <th class="no-sort">Ações</th>
                   </tr></thead>
-                  <tbody id="saidasColFilter">
+                  <tbody id="esColFilter">
                     <tr class="col-filter-row">
-                      <td><input class="col-filter-input" id="cfSaidaRef"  placeholder="Ref..."  oninput="renderSaidasTable()"/></td>
-                      <td><input class="col-filter-input" id="cfSaidaTipo" placeholder="Tipo..." oninput="renderSaidasTable()"/></td>
-                      <td><input class="col-filter-input" id="cfSaidaDesc" placeholder="Desc..." oninput="renderSaidasTable()"/></td>
+                      <td><input class="col-filter-input" id="cfESRef"     placeholder="Ref..."      oninput="renderESTable()"/></td>
+                      <td>
+                        <select class="col-filter-input" id="cfESNatureza" onchange="renderESTable()" style="padding:3px 6px;font-size:.75rem;width:100%;">
+                          <option value="">Todos</option>
+                          <option value="entrada">Entrada</option>
+                          <option value="saida">Saída</option>
+                        </select>
+                      </td>
+                      <td><input class="col-filter-input" id="cfESTipo"    placeholder="Tipo..."     oninput="renderESTable()"/></td>
+                      <td><input class="col-filter-input" id="cfESDesc"    placeholder="Desc..."     oninput="renderESTable()"/></td>
                       <td></td>
-                      <td><input class="col-filter-input" id="cfSaidaValor" placeholder="Valor..." oninput="renderSaidasTable()"/></td>
-                      <td></td><td></td>
+                      <td><input class="col-filter-input" id="cfESValor"   placeholder="Valor..."    oninput="renderESTable()"/></td>
+                      <td>
+                        <select class="col-filter-input" id="cfESStatus" onchange="renderESTable()" style="padding:3px 6px;font-size:.75rem;width:100%;">
+                          <option value="">Todos</option>
+                          <option value="pago">✔ Confirmado</option>
+                          <option value="pendente">● Pendente</option>
+                        </select>
+                      </td>
+                      <td></td>
                     </tr>
                   </tbody>
-                  <tbody id="saidasBody"></tbody>
+                  <tbody id="esBody"></tbody>
                 </table>
               </div>
             </div>
