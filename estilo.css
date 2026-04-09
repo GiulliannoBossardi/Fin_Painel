@@ -99,6 +99,7 @@ body{font-family:var(--font-body);background:var(--bg-base);color:var(--text-pri
 .card-title{font-family:var(--font-display);font-size:.95rem;font-weight:700;letter-spacing:-.01em;}
 .card-badge{font-family:var(--font-mono);font-size:.7rem;background:var(--accent-dim);color:var(--accent);padding:3px 8px;border-radius:99px;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid-2.has-panel{grid-template-columns:1fr 300px;}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
 .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
 .stat-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden;}
@@ -131,7 +132,18 @@ body{font-family:var(--font-body);background:var(--bg-base);color:var(--text-pri
 .ctrl-total-row td{border-top:1px solid var(--border-strong) !important;}
 
 /* ── TABLES ── */
-.table-wrap{overflow-x:auto;max-height:400px;overflow-y:auto;}
+.table-wrap{overflow-x:auto;overflow-y:auto;max-height:400px;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--scrollbar-thumb) transparent;}
+.table-wrap::-webkit-scrollbar{height:5px;width:5px;}
+.table-wrap::-webkit-scrollbar-track{background:transparent;}
+.table-wrap::-webkit-scrollbar-thumb{background:var(--scrollbar-thumb);border-radius:99px;}
+/* Tabelas com scroll lateral garantido */
+#salarioTable,#extrasTable,#esTable,#saidasTable,#entradasTable,
+#ctrlReceitasTable,#ctrlDespesasTable,#ctrlResumoTable,#ctrlTable,#investTable{
+  min-width:520px;white-space:nowrap;
+}
+#esTable{min-width:680px;}
+#ctrlTable{min-width:720px;}
+#ctrlReceitasTable,#ctrlDespesasTable,#ctrlResumoTable{min-width:340px;}
 table{width:100%;border-collapse:collapse;font-size:.85rem;}
 thead{position:sticky;top:0;z-index:2;}
 thead th{background:var(--bg-surface);text-align:left;font-family:var(--font-mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);padding:10px 14px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;transition:color var(--transition);}
@@ -390,7 +402,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 
   /* ── Grids e conteúdo ── */
   .content-area { padding: 12px; }
-  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  .grid-2, .grid-2.has-panel, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
   .field-row-2 { grid-template-columns: 1fr 1fr; }
 
@@ -443,11 +455,10 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   .table-wrap {
     display: block;
     width: 100%;
-    overflow-x: scroll;
-    overflow-y: visible;
+    overflow-x: auto;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     max-height: none;
-    /* Barra visível */
     scrollbar-width: thin;
     scrollbar-color: var(--accent) transparent;
   }
@@ -458,28 +469,10 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     border-radius: 99px;
   }
 
-  /* Tabela não encolhe — força scroll */
-  .table-wrap > table {
-    width: max-content;
-    min-width: 100%;
-    table-layout: auto;
-  }
-
-  /* Larguras mínimas garantidas */
-  #salarioTable  { min-width: 500px; }
-  #extrasTable   { min-width: 400px; }
-  #saidasTable   { min-width: 560px; }
-  #entradasTable { min-width: 560px; }
-  #investTable   { min-width: 500px; }
-  #ctrlTable     { min-width: 620px; }
-  #ctrlReceitasTable,
-  #ctrlDespesasTable,
-  #ctrlResumoTable { min-width: 320px; }
-
   /* Células: sem quebra de linha */
   tbody td, thead th { white-space: nowrap; }
   .td-tag { white-space: nowrap; }
-  tbody td:nth-child(3) { white-space: normal; min-width: 100px; max-width: 150px; }
+  tbody td:nth-child(4) { white-space: normal; min-width: 100px; max-width: 150px; }
 
   /* Outros */
   .sub-tabs { overflow-x: auto; flex-wrap: nowrap; }

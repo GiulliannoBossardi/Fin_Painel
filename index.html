@@ -95,7 +95,7 @@
           <div class="stat-card warn"><div class="stat-label">Extras Líquido</div><div class="stat-value neutral" id="statExtras">R$ 0,00</div><div class="stat-sub">Soma líquida dos extras</div></div>
         </div>
         <!-- grid-2: tabelas + painel inserção lado a lado -->
-        <div class="grid-2">
+        <div class="grid-2 has-panel">
           <div style="display:flex;flex-direction:column;gap:20px;">
             <div class="card">
               <div class="card-header"><div class="card-title">Tabela Salário</div><div class="flex-gap"><span class="card-badge" id="salarioBadge">0 registros</span><input type="text" placeholder="Buscar..." style="width:120px;padding:5px 10px;font-size:.78rem;" id="filterSalario" oninput="renderSalarioTable()"/></div></div>
@@ -165,7 +165,7 @@
           <div class="stat-card green"><div class="stat-label">Recebido / Pago</div><div class="stat-value income" id="esStatConfirmado">R$ 0,00</div><div class="stat-sub">Entradas recebidas − Saídas pagas</div></div>
         </div>
         <!-- grid-2: tabela unificada + painel inserção lado a lado -->
-        <div class="grid-2">
+        <div class="grid-2 has-panel">
           <div>
             <!-- Tabela Única Entradas/Saídas -->
             <div class="card">
@@ -407,7 +407,7 @@
           <div class="stat-card red"><div class="stat-label">Retiradas no Período</div><div class="stat-value expense" id="investStatRetiradas">R$ 0,00</div><div class="stat-sub">Período filtrado</div></div>
           <div class="stat-card green"><div class="stat-label">Patrimônio Líquido</div><div class="stat-value income" id="investStatPatrimonio">R$ —</div><div class="stat-sub">Aportes − Retiradas (total)</div></div>
         </div>
-        <div class="grid-2">
+        <div class="grid-2 has-panel">
           <div class="card">
             <div class="card-header"><div class="card-title">Registros de Investimento</div><div class="flex-gap"><span class="card-badge" id="investBadge">0 registros</span><input type="text" placeholder="Buscar..." style="width:130px;padding:5px 10px;font-size:.78rem;" id="filterInvest" oninput="renderInvestTable()"/></div></div>
             <div class="table-wrap" style="max-height:500px;">
