@@ -520,7 +520,6 @@ function renderEntradasTable(){renderESTable();}
 function renderESTable(){
   const tbody=document.getElementById('esBody');
   if(!tbody)return;
-  const srch=(document.getElementById('filterES')?document.getElementById('filterES').value:'').toLowerCase();
   const cfRef   =cf('cfESRef');
   const cfNatEl =document.getElementById('cfESNatureza');
   const cfNat   =cfNatEl?cfNatEl.value:'';
@@ -534,7 +533,7 @@ function renderESTable(){
   let sRows=expandirSaidas (DB.get('saidas')  ||[],filtroAno,filtroRef).map(r=>({...r,_natureza:'saida'}));
   let rows=[...eRows,...sRows];
 
-  if(srch)rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(srch)||(r.tipo||'').toLowerCase().includes(srch)||Fmt.ref(r.parcelaRef).toLowerCase().includes(srch));
+  /* Aplica todos os filtros de coluna */
   if(cfRef)   rows=rows.filter(r=>Fmt.ref(r.parcelaRef).toLowerCase().includes(cfRef));
   if(cfNat)   rows=rows.filter(r=>r._natureza===cfNat);
   if(cfTipo)  rows=rows.filter(r=>(r.tipo||'').toLowerCase().includes(cfTipo));
@@ -563,7 +562,10 @@ function renderESTable(){
   const badgeEl=document.getElementById('esBadge');
   if(badgeEl)badgeEl.textContent=rows.length+' registro'+(rows.length!==1?'s':'');
 
-  atualizarStatsES(eRows,sRows);
+  /* Passa as rows JÁ FILTRADAS para os cards */
+  const eRowsFilt=rows.filter(r=>r._natureza==='entrada');
+  const sRowsFilt=rows.filter(r=>r._natureza==='saida');
+  atualizarStatsES(eRowsFilt,sRowsFilt);
 
   if(!rows.length){tbody.innerHTML='<tr class="empty-row"><td colspan="8">Nenhum lan\u00e7amento encontrado.</td></tr>';return;}
 
@@ -661,8 +663,11 @@ function atualizarStatsSaida(){atualizarStatsES();}
 function atualizarStatsEntrada(){atualizarStatsES();}
 
 function atualizarStatsES(eRows,sRows){
-  if(!eRows)eRows=expandirEntradas(DB.get('entradas')||[],filtroAno,filtroRef);
-  if(!sRows)sRows=expandirSaidas(DB.get('saidas')||[],filtroAno,filtroRef);
+  /* Quando chamado sem args (ex: ao mudar período), aplica filtros de coluna */
+  if(!eRows||!sRows){
+    renderESTable(); /* renderESTable já chama atualizarStatsES com rows filtradas */
+    return;
+  }
   const totalE=eRows.reduce((s,r)=>s+r.valorExib,0);
   const totalS=sRows.reduce((s,r)=>s+r.valorExib,0);
   const saldo=totalE-totalS;
