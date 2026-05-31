@@ -427,10 +427,10 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   .stat-label { font-size: .68rem; }
   .stat-card { padding: 12px 14px; }
 
-  /* Cards — overflow: hidden contém o table-wrap interno */
+  /* Cards — contidos dentro da tela, bordas visíveis */
   .card {
     padding: 14px;
-    overflow: hidden;
+    overflow: visible;
     box-sizing: border-box;
     width: 100%;
     max-width: 100%;
@@ -438,21 +438,11 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   }
   .card-header { flex-wrap: wrap; gap: 8px; }
 
-  /* table-wrap dentro do card: scroll horizontal sem vazar */
-  .card .table-wrap {
-    overflow-x: auto;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    width: 100%;
-    max-width: 100%;
-  }
-
   /* Painel de inserção — contido e com bordas visíveis */
   .insert-panel {
     position: static !important;
     width: 100% !important;
     max-width: 100% !important;
-    overflow: hidden !important;
     margin-top: 16px;
     padding: 16px !important;
     box-sizing: border-box !important;
@@ -479,14 +469,16 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
      TABELAS — scroll horizontal obrigatório
   ════════════════════════════════════════ */
 
-  /* O card contém o table-wrap com overflow: hidden.
-     O scroll horizontal fica dentro do .table-wrap */
+  /* O card não pode clipar o conteúdo */
+  .card { overflow: visible !important; }
 
   /* Wrapper: bloco com scroll horizontal */
   .table-wrap {
     display: block;
     width: 100%;
-    max-width: 100%;
+    /* max-width garante que o container não ultrapasse a tela,
+       forçando o scroll interno da tabela a funcionar */
+    max-width: 100vw;
     box-sizing: border-box;
     overflow-x: auto;
     overflow-y: auto;
