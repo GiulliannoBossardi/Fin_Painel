@@ -329,35 +329,35 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 
 @media (max-width: 900px) {
 
-  /* Impede a página de rolar lateralmente */
-  html, body {
-    overflow-x: clip;
+  /* No mobile: o scroll é do body, não do .main
+     Zera todas as restrições de altura/overflow do layout desktop */
+  html {
+    overflow: visible;
+    height: auto;
   }
 
   body {
-    flex-direction: column;
-    height: auto;
+    overflow: visible !important;   /* desfaz o overflow:hidden global */
+    height: auto !important;
     min-height: 100%;
-    overflow-y: auto;
+    flex-direction: column;
   }
 
   #appWrapper {
-    flex-direction: column;
-    width: 100%;
-    height: auto;
+    overflow: visible !important;   /* desfaz o overflow:hidden global */
+    height: auto !important;
     min-height: 100vh;
-    overflow-x: clip;
-    overflow-y: visible;
+    width: 100%;
+    flex-direction: column;
   }
 
-  /* .main: âncora de largura — clip não cria scroll context */
+  /* .main: deixa o conteúdo fluir naturalmente */
   .main {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0;
     flex: none;
     width: 100%;
-    height: auto;
-    min-height: 0;
-    overflow-x: clip;
-    overflow-y: visible;
   }
 
   /* ── Sidebar overlay ── */
@@ -409,7 +409,14 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   }
 
   /* ── Conteúdo ── */
-  .content-area { padding: 12px; }
+  /* content-area é o verdadeiro limitador de largura no mobile */
+  .content-area {
+    padding: 12px;
+    width: 100vw;
+    max-width: 100vw;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
 
   /* Grids */
   .grid-2, .grid-2.has-panel, .grid-3, .grid-4 { grid-template-columns: 1fr; }
@@ -423,32 +430,36 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   .stat-label { font-size: .68rem; }
   .stat-card { padding: 12px 14px; }
 
-  /* Cards: hidden para conter table-wrap visualmente com borda */
+  /* Cards: overflow visible — a contenção é feita pelo content-area */
   .card {
     padding: 14px;
-    overflow: hidden;
+    overflow: visible;
     min-width: 0;
+    /* garante que o card não ultrapasse o content-area */
+    max-width: 100%;
+    box-sizing: border-box;
   }
   .card-header { flex-wrap: wrap; gap: 8px; }
 
-  /* Painel de inserção: contido com borda visível */
+  /* Painel de inserção */
   .insert-panel {
     position: static !important;
     width: 100% !important;
     max-width: 100% !important;
-    overflow: hidden !important;
+    overflow: visible !important;
     margin-top: 16px;
     padding: 16px !important;
     box-sizing: border-box !important;
   }
 
-  /* Inputs e selects dentro do painel: não ultrapassam o pai */
+  /* Inputs e selects: limitados ao pai */
   .insert-panel input,
   .insert-panel select,
-  .insert-panel textarea {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
+  .insert-panel textarea,
+  .insert-panel .currency-input-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   /* Botão confirmar */
