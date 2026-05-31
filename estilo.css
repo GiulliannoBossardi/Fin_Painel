@@ -312,13 +312,14 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 .parcela-fields-title{font-size:.7rem;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:10px;}
 
 /* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}
+  .form-grid,.field-row-2{grid-template-columns:1fr;}
+}
+@media(max-width:700px){.content-area{padding:14px;}}
+
 /* ════════════════════════════════════════════
-   RESPONSIVO MOBILE (≤ 900px)
-   Regra de ouro:
-   - body/html: overflow-x:hidden  →  impede scroll lateral da página
-   - .main: overflow-x:hidden      →  contém os filhos dentro da largura
-   - .card: overflow:hidden         →  contém o table-wrap
-   - .table-wrap: overflow-x:auto  →  único scroll horizontal das tabelas
+   RESPONSIVO COMPLETO
 ════════════════════════════════════════════ */
 
 /* Desktop: botão confirmar com espaço */
@@ -326,35 +327,31 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 
 @media (max-width: 900px) {
 
-  /* ── Layout base: página rola verticalmente, nunca lateralmente ── */
-  html {
-    overflow-x: hidden;
-  }
-  body {
-    flex-direction: column;
+  /* ── Modelo de layout: página rola normalmente ── */
+  html, body {
     height: auto;
     min-height: 100%;
-    overflow-x: hidden;
+    /* clip impede scroll lateral da PÁGINA mas não bloqueia scroll
+       de filhos com overflow-x:auto (como .table-wrap) */
+    overflow-x: clip;
     overflow-y: auto;
   }
+  body { flex-direction: column; }
 
   #appWrapper {
     flex-direction: column;
     height: auto;
     min-height: 100vh;
-    overflow-x: hidden;
-    overflow-y: visible;
-    width: 100%;
+    overflow: visible;
   }
 
-  /* .main: coluna central, nunca mais larga que a tela */
   .main {
-    flex: none;
-    width: 100%;
     height: auto;
     min-height: 0;
     overflow-x: hidden;
     overflow-y: visible;
+    flex: none;
+    width: 100%;
   }
 
   /* ── Sidebar: overlay fixo ── */
@@ -390,8 +387,6 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     z-index: 100;
     padding: 12px 14px;
     flex-shrink: 0;
-    width: 100%;
-    box-sizing: border-box;
   }
   .topbar-date { display: none; }
   .hamburger-btn {
@@ -407,14 +402,8 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     flex-shrink: 0;
   }
 
-  /* ── Área de conteúdo ── */
-  .content-area {
-    padding: 12px;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  /* ── Grids ── */
+  /* ── Grids e conteúdo ── */
+  .content-area { padding: 12px; }
   .grid-2, .grid-2.has-panel, .grid-3, .grid-4 { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
   .field-row-2 { grid-template-columns: 1fr 1fr; }
@@ -427,30 +416,20 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   .stat-label { font-size: .68rem; }
   .stat-card { padding: 12px 14px; }
 
-  /* ── Cards ──
-     overflow:hidden é ESSENCIAL: contém o .table-wrap interno.
-     Sem isso a tabela (min-width:520px+) vaza para fora da tela. */
-  .card {
-    padding: 14px;
-    overflow: hidden;
-    width: 100%;
-    box-sizing: border-box;
-    min-width: 0;
-  }
+  /* Cards */
+  .card { padding: 14px; overflow: visible; }
   .card-header { flex-wrap: wrap; gap: 8px; }
 
-  /* ── Painel de inserção ── */
+  /* Painel de inserção */
   .insert-panel {
     position: static !important;
     width: 100% !important;
-    max-width: 100% !important;
-    overflow: hidden !important;
     margin-top: 16px;
     padding: 16px !important;
-    box-sizing: border-box !important;
+    box-sizing: border-box;
   }
 
-  /* ── Botão confirmar ── */
+  /* Botão confirmar */
   .btn-confirmar-wrap {
     position: static !important;
     margin-top: 16px !important;
@@ -467,34 +446,41 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
     border-radius: var(--radius-sm) !important;
   }
 
-  /* ── Tabelas: scroll horizontal dentro do card ──
-     O card (overflow:hidden) define o limite visual.
-     O .table-wrap (overflow-x:auto) cria o scroll interno.
-     As tabelas têm min-width fixo → forçam o scroll ao invés de encolher. */
+  /* ════════════════════════════════════════
+     TABELAS — scroll horizontal obrigatório
+  ════════════════════════════════════════ */
+
+  /* O card contém o table-wrap — overflow:hidden define a borda visual */
+  .card { overflow: hidden; }
+
+  /* Wrapper: bloco com scroll horizontal */
   .table-wrap {
     display: block;
     width: 100%;
+    /* max-width garante que o container não ultrapasse a tela,
+       forçando o scroll interno da tabela a funcionar */
+    max-width: 100%;
     box-sizing: border-box;
-    overflow-x: auto !important;
+    overflow-x: auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     max-height: none;
     scrollbar-width: thin;
     scrollbar-color: var(--accent) transparent;
   }
-  .table-wrap::-webkit-scrollbar { height: 6px; width: 5px; }
+  .table-wrap::-webkit-scrollbar { height: 5px; }
   .table-wrap::-webkit-scrollbar-track { background: transparent; }
   .table-wrap::-webkit-scrollbar-thumb {
     background: var(--accent);
     border-radius: 99px;
   }
 
-  /* Células sem quebra */
+  /* Células: sem quebra de linha */
   tbody td, thead th { white-space: nowrap; }
   .td-tag { white-space: nowrap; }
   tbody td:nth-child(4) { white-space: normal; min-width: 100px; max-width: 150px; }
 
-  /* ── Outros ── */
+  /* Outros */
   .sub-tabs { overflow-x: auto; flex-wrap: nowrap; }
   .sub-tab { white-space: nowrap; flex-shrink: 0; padding: 6px 12px; font-size: .8rem; }
   .filter-bar { padding: 10px 12px; gap: 8px; flex-wrap: wrap; }
