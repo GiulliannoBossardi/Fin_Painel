@@ -1445,50 +1445,70 @@ const _origNavigateTo = navigateTo;
    ABA CONSOLIDADO
 ============================================ */
 const consSortSt = { col: 'ref', dir: -1 };
+let consFiltroAno = '';
 
-function getConsolidadoRows() {
-  /* Coleta todos os refs existentes em todos os módulos */
+function getConsolidadoRows(ano) {
   const refsSet = new Set();
-
   (DB.get('salarios') || []).forEach(s => refsSet.add(s.ref));
   (DB.get('extras')   || []).forEach(e => refsSet.add(e.ref));
-
   (DB.get('entradas') || []).forEach(e => {
     if (e.forma === 'parcelado' && e.primeiraParcela) {
       for (let i = 0; i < (e.nParcelas || 1); i++) refsSet.add(Fmt.addMonths(e.primeiraParcela, i));
     } else if (e.ref) refsSet.add(e.ref);
   });
-
   (DB.get('saidas') || []).forEach(s => {
     if (s.forma === 'parcelado' && s.primeiraParcela) {
       for (let i = 0; i < (s.nParcelas || 1); i++) refsSet.add(Fmt.addMonths(s.primeiraParcela, i));
     } else if (s.ref) refsSet.add(s.ref);
   });
-
   (DB.get('investimentos') || []).forEach(i => { if (i.ref) refsSet.add(i.ref); });
 
-  return [...refsSet].sort().map(ref => {
-    /* Entradas do mês: salário líquido + extras + entradas avulsas/parceladas */
-    const salRows = getSalRows('', ref);
-    const salLiq  = salRows.reduce((s, r) => s + r.liquido, 0);
-    const extras  = (DB.get('extras') || []).filter(e => e.ref === ref);
-    const extLiq  = extras.reduce((s, e) => s + (e.liquido || 0), 0);
-    const entRows = expandirEntradas(DB.get('entradas') || [], '', ref);
+  let refs = [...refsSet].sort();
+  if (ano) refs = refs.filter(r => r.startsWith(ano + '-'));
+
+  return refs.map(ref => {
+    const salRows  = getSalRows('', ref);
+    const salLiq   = salRows.reduce((s, r) => s + r.liquido, 0);
+    const extras   = (DB.get('extras') || []).filter(e => e.ref === ref);
+    const extLiq   = extras.reduce((s, e) => s + (e.liquido || 0), 0);
+    const entRows  = expandirEntradas(DB.get('entradas') || [], '', ref);
     const entTotal = entRows.reduce((s, r) => s + r.valorExib, 0);
     const entradas = salLiq + extLiq + entTotal;
-
-    /* Saídas do mês */
-    const saiRows = expandirSaidas(DB.get('saidas') || [], '', ref);
-    const saidas  = saiRows.reduce((s, r) => s + r.valorExib, 0);
-
-    /* Investimentos do mês (aportes - retiradas) */
-    const invRows = (DB.get('investimentos') || []).filter(i => i.ref === ref);
+    const saiRows  = expandirSaidas(DB.get('saidas') || [], '', ref);
+    const saidas   = saiRows.reduce((s, r) => s + r.valorExib, 0);
+    const invRows  = (DB.get('investimentos') || []).filter(i => i.ref === ref);
     const investimentos = invRows.filter(i => (i.operacao || 'aporte') === 'aporte').reduce((s, i) => s + i.valor, 0)
                         - invRows.filter(i => i.operacao === 'retirada').reduce((s, i) => s + i.valor, 0);
-
-    const saldo = entradas - saidas - investimentos;
-    return { ref, entradas, saidas, investimentos, saldo };
+    return { ref, entradas, saidas, investimentos, saldo: entradas - saidas - investimentos };
   });
+}
+
+function reconstruirFiltroConsolidado() {
+  const allRefs = getAllRefs();
+  const anos = [...new Set(allRefs.map(r => r.split('-')[0]))].sort().reverse();
+  const sel = document.getElementById('consFiltroAno');
+  if (!sel) return;
+  const atual = sel.value;
+  sel.innerHTML = '<option value="">Todos</option>';
+  anos.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; sel.appendChild(o); });
+  sel.value = consFiltroAno || atual;
+}
+
+function onConsFiltroAnoChange() {
+  const sel = document.getElementById('consFiltroAno');
+  consFiltroAno = sel ? sel.value : '';
+  const lbl = document.getElementById('consFiltroLabel');
+  if (lbl) { lbl.textContent = consFiltroAno ? 'Ano: ' + consFiltroAno : ''; lbl.style.display = consFiltroAno ? 'inline' : 'none'; }
+  renderConsolidado();
+}
+
+function limparFiltroConsolidado() {
+  consFiltroAno = '';
+  const sel = document.getElementById('consFiltroAno');
+  if (sel) sel.value = '';
+  const lbl = document.getElementById('consFiltroLabel');
+  if (lbl) lbl.style.display = 'none';
+  renderConsolidado();
 }
 
 function sortConsolidado(col) {
@@ -1503,105 +1523,63 @@ function sortConsolidado(col) {
 }
 
 function renderConsolidado() {
+  reconstruirFiltroConsolidado();
   const tbody = document.getElementById('consolidadoBody');
   const tfoot = document.getElementById('consolidadoFoot');
   if (!tbody) return;
 
-  let rows = getConsolidadoRows();
+  let rows = getConsolidadoRows(consFiltroAno);
   const { col, dir } = consSortSt;
-  rows.sort((a, b) => {
-    const av = a[col] !== undefined ? a[col] : a.ref;
-    const bv = b[col] !== undefined ? b[col] : b.ref;
-    return av < bv ? -dir : av > bv ? dir : 0;
-  });
+  rows.sort((a, b) => { const av = a[col] !== undefined ? a[col] : a.ref, bv = b[col] !== undefined ? b[col] : b.ref; return av < bv ? -dir : av > bv ? dir : 0; });
 
-  /* KPI cards do topo */
-  const totEnt  = rows.reduce((s, r) => s + r.entradas, 0);
-  const totSai  = rows.reduce((s, r) => s + r.saidas, 0);
-  const totInv  = rows.reduce((s, r) => s + r.investimentos, 0);
+  const totEnt = rows.reduce((s, r) => s + r.entradas, 0);
+  const totSai = rows.reduce((s, r) => s + r.saidas, 0);
+  const totInv = rows.reduce((s, r) => s + r.investimentos, 0);
   const totSaldo = totEnt - totSai - totInv;
 
   const g = id => document.getElementById(id);
-  if (g('consStatEntradas'))  g('consStatEntradas').textContent  = Fmt.brl(totEnt);
-  if (g('consStatSaidas'))    g('consStatSaidas').textContent    = Fmt.brl(totSai);
-  if (g('consStatInvest'))    g('consStatInvest').textContent    = Fmt.brl(totInv);
-  if (g('consStatSaldo')) {
-    g('consStatSaldo').textContent  = Fmt.brl(Math.abs(totSaldo));
-    g('consStatSaldo').className    = 'stat-value ' + (totSaldo >= 0 ? 'income' : 'expense');
-  }
-  if (g('consSaldoCard')) g('consSaldoCard').className = 'stat-card ' + (totSaldo >= 0 ? 'green' : 'red');
-  if (g('consBadge'))     g('consBadge').textContent   = rows.length + ' mês' + (rows.length !== 1 ? 'es' : '');
+  if (g('consStatEntradas')) g('consStatEntradas').textContent = Fmt.brl(totEnt);
+  if (g('consStatSaidas'))   g('consStatSaidas').textContent   = Fmt.brl(totSai);
+  if (g('consStatInvest'))   g('consStatInvest').textContent   = Fmt.brl(totInv);
+  if (g('consStatSaldo'))  { g('consStatSaldo').textContent = (totSaldo < 0 ? '−' : '') + Fmt.brl(Math.abs(totSaldo)); g('consStatSaldo').className = 'stat-value ' + (totSaldo >= 0 ? 'income' : 'expense'); }
+  if (g('consSaldoCard'))    g('consSaldoCard').className = 'stat-card ' + (totSaldo >= 0 ? 'green' : 'red');
+  if (g('consBadge'))        g('consBadge').textContent = rows.length + ' mês' + (rows.length !== 1 ? 'es' : '');
 
-  if (!rows.length) {
-    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Nenhum dado registrado.</td></tr>';
-    tfoot.innerHTML = '';
-    return;
-  }
+  if (!rows.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Nenhum dado no período selecionado.</td></tr>'; tfoot.innerHTML = ''; return; }
 
   tbody.innerHTML = rows.map(r => {
-    const saldoClass = r.saldo >= 0 ? 'td-value-income' : 'td-value-expense';
-    const saldoStr   = (r.saldo < 0 ? '−' : '') + Fmt.brl(Math.abs(r.saldo));
-    const invStr     = r.investimentos !== 0
-      ? `<span class="td-value-invest">${r.investimentos < 0 ? '−' : ''}${Fmt.brl(Math.abs(r.investimentos))}</span>`
-      : '<span style="color:var(--text-muted)">—</span>';
-    return `<tr>
-      <td class="td-ref cons-ref">${Fmt.ref(r.ref)}</td>
-      <td class="td-value-income">${Fmt.brl(r.entradas)}</td>
-      <td class="td-value-expense">−${Fmt.brl(r.saidas)}</td>
-      <td>${invStr}</td>
-      <td class="${saldoClass}" style="font-weight:700;">${saldoStr}</td>
-    </tr>`;
+    const sc = r.saldo >= 0 ? 'td-value-income' : 'td-value-expense';
+    const sv = (r.saldo < 0 ? '−' : '') + Fmt.brl(Math.abs(r.saldo));
+    const iv = r.investimentos !== 0 ? `<span class="td-value-invest">${r.investimentos < 0 ? '−' : ''}${Fmt.brl(Math.abs(r.investimentos))}</span>` : '<span style="color:var(--text-muted)">—</span>';
+    return `<tr><td class="td-ref cons-ref">${Fmt.ref(r.ref)}</td><td class="td-value-income">${Fmt.brl(r.entradas)}</td><td class="td-value-expense">−${Fmt.brl(r.saidas)}</td><td>${iv}</td><td class="${sc}" style="font-weight:700;">${sv}</td></tr>`;
   }).join('');
 
-  /* Rodapé totais */
-  const totSaldoClass = totSaldo >= 0 ? 'td-value-income' : 'td-value-expense';
-  const totSaldoStr   = (totSaldo < 0 ? '−' : '') + Fmt.brl(Math.abs(totSaldo));
-  tfoot.innerHTML = `<tr class="ctrl-total-row cons-total">
-    <td style="font-size:.82rem;text-align:right;padding-right:14px;">Total</td>
-    <td class="td-value-income">${Fmt.brl(totEnt)}</td>
-    <td class="td-value-expense">−${Fmt.brl(totSai)}</td>
-    <td class="td-value-invest">${totInv !== 0 ? (totInv < 0 ? '−' : '') + Fmt.brl(Math.abs(totInv)) : '—'}</td>
-    <td class="${totSaldoClass}" style="font-weight:700;">${totSaldoStr}</td>
-  </tr>`;
+  const tsc = totSaldo >= 0 ? 'td-value-income' : 'td-value-expense';
+  const tsv = (totSaldo < 0 ? '−' : '') + Fmt.brl(Math.abs(totSaldo));
+  const tiv = totInv !== 0 ? (totInv < 0 ? '−' : '') + Fmt.brl(Math.abs(totInv)) : '—';
+  tfoot.innerHTML = `<tr class="ctrl-total-row cons-total"><td style="font-size:.82rem;text-align:right;padding-right:14px;">Total</td><td class="td-value-income">${Fmt.brl(totEnt)}</td><td class="td-value-expense">−${Fmt.brl(totSai)}</td><td class="td-value-invest">${tiv}</td><td class="${tsc}" style="font-weight:700;">${tsv}</td></tr>`;
 }
 
 function exportarConsolidadoMensalXlsx() {
   if (typeof XLSX === 'undefined') { Toast.show('Biblioteca XLSX não carregada.', 'error', 5000); return; }
-  const rows = getConsolidadoRows();
+  const rows = getConsolidadoRows(consFiltroAno);
   if (!rows.length) { Toast.show('Nenhum dado para exportar', 'warn'); return; }
-
   const { col, dir } = consSortSt;
-  rows.sort((a, b) => {
-    const av = a[col] !== undefined ? a[col] : a.ref;
-    const bv = b[col] !== undefined ? b[col] : b.ref;
-    return av < bv ? -dir : av > bv ? dir : 0;
-  });
-
+  rows.sort((a, b) => { const av = a[col] !== undefined ? a[col] : a.ref, bv = b[col] !== undefined ? b[col] : b.ref; return av < bv ? -dir : av > bv ? dir : 0; });
   const wsData = [['Mês/Ano', 'Entradas (R$)', 'Saídas (R$)', 'Investimentos (R$)', 'Saldo (R$)']];
   rows.forEach(r => wsData.push([Fmt.ref(r.ref), r.entradas, -r.saidas, r.investimentos, r.saldo]));
-
-  const totEnt   = rows.reduce((s, r) => s + r.entradas, 0);
-  const totSai   = rows.reduce((s, r) => s + r.saidas, 0);
-  const totInv   = rows.reduce((s, r) => s + r.investimentos, 0);
-  const totSaldo = totEnt - totSai - totInv;
-  wsData.push(['TOTAL', totEnt, -totSai, totInv, totSaldo]);
-
+  const totEnt = rows.reduce((s, r) => s + r.entradas, 0), totSai = rows.reduce((s, r) => s + r.saidas, 0), totInv = rows.reduce((s, r) => s + r.investimentos, 0);
+  wsData.push(['TOTAL', totEnt, -totSai, totInv, totEnt - totSai - totInv]);
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws['!cols'] = [{ wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 18 }];
   const fmt = '"R$" #,##0.00;[Red]"R$"-#,##0.00';
-  for (let i = 1; i < wsData.length; i++) {
-    [1, 2, 3, 4].forEach(c => {
-      const ref = XLSX.utils.encode_cell({ r: i, c });
-      if (ws[ref] && typeof ws[ref].v === 'number') { ws[ref].t = 'n'; ws[ref].z = fmt; }
-    });
-  }
-
+  for (let i = 1; i < wsData.length; i++) [1,2,3,4].forEach(c => { const ref = XLSX.utils.encode_cell({r:i,c}); if (ws[ref] && typeof ws[ref].v === 'number') { ws[ref].t = 'n'; ws[ref].z = fmt; } });
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Consolidado Mensal');
-  XLSX.writeFile(wb, 'FinPanel_Consolidado_Mensal.xlsx');
-  Toast.show('Exportado: FinPanel_Consolidado_Mensal.xlsx', 'success');
+  const nome = 'Consolidado' + (consFiltroAno ? ' ' + consFiltroAno : ' Mensal');
+  XLSX.utils.book_append_sheet(wb, ws, nome.slice(0, 31));
+  XLSX.writeFile(wb, 'FinPanel_Consolidado' + (consFiltroAno ? '_' + consFiltroAno : '_Mensal') + '.xlsx');
+  Toast.show('Exportado com sucesso!', 'success');
 }
-
 
 /* ============================================
    INIT — agora assíncrono por causa do Firebase

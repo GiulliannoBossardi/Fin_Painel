@@ -529,13 +529,21 @@
 
       <!-- ═══ CONSOLIDADO ═══ -->
       <div class="tab-panel" id="tab-consolidado">
-        <div class="grid-4 mb-20">
-          <div class="stat-card green"><div class="stat-label">Total Entradas</div><div class="stat-value income" id="consStatEntradas">R$ 0,00</div><div class="stat-sub">Soma geral de receitas</div></div>
-          <div class="stat-card red"><div class="stat-label">Total Saídas</div><div class="stat-value expense" id="consStatSaidas">R$ 0,00</div><div class="stat-sub">Soma geral de despesas</div></div>
-          <div class="stat-card invest"><div class="stat-label">Total Investido</div><div class="stat-value invest" id="consStatInvest">R$ 0,00</div><div class="stat-sub">Soma geral de aportes</div></div>
-          <div class="stat-card blue" id="consSaldoCard"><div class="stat-label">Saldo Geral</div><div class="stat-value" id="consStatSaldo">R$ 0,00</div><div class="stat-sub">Entradas − Saídas − Invest.</div></div>
+        <div class="filter-bar">
+          <label>Ano:</label>
+          <select id="consFiltroAno" onchange="onConsFiltroAnoChange()" style="width:100px;">
+            <option value="">Todos</option>
+          </select>
+          <button class="filter-clear" onclick="limparFiltroConsolidado()">✕ Limpar</button>
+          <span id="consFiltroLabel" class="filter-label-badge" style="display:none;"></span>
         </div>
-        <div class="card">
+        <div class="grid-4 mb-20">
+          <div class="stat-card green"><div class="stat-label">Total Entradas</div><div class="stat-value income" id="consStatEntradas">R$ 0,00</div><div class="stat-sub">Soma do período filtrado</div></div>
+          <div class="stat-card red"><div class="stat-label">Total Saídas</div><div class="stat-value expense" id="consStatSaidas">R$ 0,00</div><div class="stat-sub">Soma do período filtrado</div></div>
+          <div class="stat-card invest"><div class="stat-label">Total Investido</div><div class="stat-value invest" id="consStatInvest">R$ 0,00</div><div class="stat-sub">Soma do período filtrado</div></div>
+          <div class="stat-card blue" id="consSaldoCard"><div class="stat-label">Saldo do Período</div><div class="stat-value" id="consStatSaldo">R$ 0,00</div><div class="stat-sub">Entradas − Saídas − Invest.</div></div>
+        </div>
+        <div class="card cons-card-full">
           <div class="card-header">
             <div class="card-title">Consolidado Mensal</div>
             <div class="flex-gap">
@@ -546,8 +554,8 @@
               </button>
             </div>
           </div>
-          <div class="table-wrap">
-            <table id="consolidadoTable">
+          <div class="table-wrap cons-table-wrap">
+            <table id="consolidadoTable" class="cons-table">
               <thead>
                 <tr>
                   <th onclick="sortConsolidado('ref')" data-col="ref">Mês/Ano <span class="sort-icon">↕</span></th>

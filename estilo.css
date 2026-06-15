@@ -782,9 +782,16 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   background: var(--bg-elevated);
 }
 
-/* ════════════════════════════════════════════
+/* ============================================
    ABA CONSOLIDADO
-════════════════════════════════════════════ */
+============================================ */
+.cons-card-full { width: 100%; }
+.cons-table-wrap { overflow-x: auto; }
+.cons-table { width: 100%; table-layout: fixed; }
+.cons-table th, .cons-table td { padding: 12px 20px; font-size: .88rem; }
+.cons-table th:first-child, .cons-table td:first-child { width: 14%; }
+.cons-table th:nth-child(n+2), .cons-table td:nth-child(n+2) { width: 21.5%; }
+
 #consolidadoTable td.cons-ref {
   font-family: var(--font-mono);
   font-weight: 600;
