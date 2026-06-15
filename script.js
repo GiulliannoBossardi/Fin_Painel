@@ -1603,6 +1603,8 @@ function exportarConsolidadoMensalXlsx() {
 }
 
 
+/* ════════════════════════════════════════════
+   INIT — agora assíncrono por causa do Firebase
 ════════════════════════════════════════════ */
 async function init() {
   mostrarLoading('Conectando ao Firebase…');
