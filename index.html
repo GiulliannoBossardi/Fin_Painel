@@ -228,7 +228,6 @@
               </div>
             </div>
             <div class="form-grid single">
-              <div class="form-group"><label>Referência (Mês/Ano)</label><input type="month" id="esRef"/></div>
               <!-- Toggle Entrada / Saída -->
               <div class="form-group"><label>Tipo de Lançamento</label>
                 <select id="esTipoLancamento" onchange="onEsTipoLancamentoChange()">
@@ -238,16 +237,13 @@
               </div>
               <div class="form-group"><label>Tipo de Conta</label><select id="esTipoConta"></select></div>
               <div class="form-group"><label>Descrição</label><input type="text" id="esDescricao" placeholder="Ex: Aluguel, freelance..."/></div>
-              <div class="form-group"><label id="esFormaLabel">Forma de Recebimento</label>
-                <select id="esForma" onchange="onEsFormaChange()"><option value="avista">À Vista</option><option value="parcelado">Parcelado</option></select>
-              </div>
               <div class="form-group"><label id="esValorLabel">Valor Recebido</label><div class="currency-input-wrap"><span class="currency-prefix">R$</span><input type="text" id="esValor" placeholder="0.000,00" oninput="maskCurrency(this)"/></div></div>
             </div>
-            <div class="parcela-fields" id="esParcelaFields">
+            <div class="parcela-fields visible" id="esParcelaFields">
               <div class="parcela-fields-title">Detalhes do Parcelamento</div>
               <div class="field-row-2">
-                <div class="form-group"><label>Nº de Parcelas</label><input type="text" id="esNParcelas" placeholder="Ex: 12" oninput="this.value=this.value.replace(/\D/g,'')"/></div>
-                <div class="form-group"><label>Mês/Ano da 1ª Parcela</label><input type="month" id="esPrimeiraParcela"/></div>
+                <div class="form-group"><label>Mês/Ano da 1ª Parcela (ou única)</label><input type="month" id="esPrimeiraParcela"/></div>
+                <div class="form-group"><label>Nº de Parcelas</label><input type="text" id="esNParcelas" placeholder="1 = à vista · 2+ = parcelado" oninput="this.value=this.value.replace(/\D/g,'');atualizarValorLabelES();"/></div>
               </div>
             </div>
             <div class="btn-confirmar-wrap"><button class="btn btn-primary btn-full btn-confirmar" id="esBtnConfirmar" onclick="confirmarInsercaoES()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span id="esBtnLabel">Confirmar Entrada</span></button></div>

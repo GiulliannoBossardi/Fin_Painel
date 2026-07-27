@@ -694,8 +694,6 @@ function onEsTipoLancamentoChange(){
   const icon=document.getElementById('esPanelIcon');
   const title=document.getElementById('esPanelTitle');
   const sub=document.getElementById('esPanelSub');
-  const formaLabel=document.getElementById('esFormaLabel');
-  const valorLabel=document.getElementById('esValorLabel');
   const btn=document.getElementById('esBtnConfirmar');
   const btnLabel=document.getElementById('esBtnLabel');
   const descEl=document.getElementById('esDescricao');
@@ -703,56 +701,46 @@ function onEsTipoLancamentoChange(){
     icon.style.background='rgba(0,201,122,.15)';icon.style.color='var(--income)';
     icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
     title.textContent='Registrar Entrada';sub.textContent='Adicionar recebimento';
-    formaLabel.textContent='Forma de Recebimento';
-    valorLabel.textContent=document.getElementById('esForma').value==='parcelado'?'Valor de cada parcela':'Valor Recebido';
     btn.style.background='var(--income)';btnLabel.textContent='Confirmar Entrada';
     descEl.placeholder='Ex: Aluguel, freelance...';
   } else {
     icon.style.background='rgba(255,77,106,.15)';icon.style.color='var(--expense)';
     icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 16 12 21 17 16"/><line x1="12" y1="21" x2="12" y2="9"/></svg>';
     title.textContent='Registrar Sa\u00edda';sub.textContent='Adicionar nova despesa';
-    formaLabel.textContent='Forma de Pagamento';
-    valorLabel.textContent=document.getElementById('esForma').value==='parcelado'?'Valor de cada parcela':'Valor Pago';
     btn.style.background='var(--expense)';btnLabel.textContent='Confirmar Sa\u00edda';
     descEl.placeholder='Ex: Conta de luz, Nubank...';
   }
+  atualizarValorLabelES();
 }
-function onEsFormaChange(){
-  const parcelado=document.getElementById('esForma').value==='parcelado';
-  document.getElementById('esParcelaFields').classList.toggle('visible',parcelado);
+/* Rótulo do valor: à vista (1 parcela) vs parcelado (2+) — decidido pelo Nº de Parcelas */
+function atualizarValorLabelES(){
   const tipo=document.getElementById('esTipoLancamento').value;
-  document.getElementById('esValorLabel').textContent=parcelado?'Valor de cada parcela':(tipo==='entrada'?'Valor Recebido':'Valor Pago');
+  const n=parseInt(document.getElementById('esNParcelas').value)||1;
+  const valorLabel=document.getElementById('esValorLabel');
+  if(!valorLabel)return;
+  valorLabel.textContent=n>1?'Valor de cada parcela':(tipo==='entrada'?'Valor Recebido':'Valor Pago');
 }
 function confirmarInsercaoES(){
   const tipo=document.getElementById('esTipoLancamento').value;
-  const ref=document.getElementById('esRef').value;
   const tipoConta=document.getElementById('esTipoConta').value;
   const descricao=document.getElementById('esDescricao').value.trim();
-  const forma=document.getElementById('esForma').value;
   const valor=Fmt.parse(document.getElementById('esValor').value);
-  if(!ref){Toast.show('Selecione a refer\u00eancia','error');return;}
+  const nParcelas=parseInt(document.getElementById('esNParcelas').value)||0;
+  const primeiraParcela=document.getElementById('esPrimeiraParcela').value;
   if(!tipoConta){Toast.show('Selecione o tipo de conta','error');return;}
   if(!descricao){Toast.show('Informe a descri\u00e7\u00e3o','error');return;}
   if(!valor){Toast.show('Informe o valor','error');return;}
+  if(!primeiraParcela){Toast.show('Informe o m\u00eas/ano da 1\u00aa parcela (ou \u00fanica)','error');return;}
+  if(!nParcelas||nParcelas<1){Toast.show('Informe o n\u00famero de parcelas (1 para \u00e0 vista)','error');return;}
   const dbKey=tipo==='entrada'?'entradas':'saidas';
-  const rec={id:Fmt.uid(),ref,tipo:tipoConta,descricao,forma,valor,pagos:{}};
-  if(forma==='parcelado'){
-    const nParcelas=parseInt(document.getElementById('esNParcelas').value)||0;
-    const primeiraParcela=document.getElementById('esPrimeiraParcela').value;
-    if(!nParcelas||nParcelas<1){Toast.show('Informe o n\u00famero de parcelas','error');return;}
-    if(!primeiraParcela){Toast.show('Informe a 1\u00aa parcela','error');return;}
-    rec.nParcelas=nParcelas;rec.primeiraParcela=primeiraParcela;
-  }else{rec.nParcelas=1;}
+  const forma=nParcelas>1?'parcelado':'avista';
+  const rec={id:Fmt.uid(),ref:primeiraParcela,tipo:tipoConta,descricao,forma,valor,pagos:{},nParcelas,primeiraParcela};
   const arr=DB.get(dbKey)||[];arr.push(rec);DB.set(dbKey,arr);
   Toast.show(`${tipo==='entrada'?'Entrada':'Sa\u00edda'} "${descricao}" registrada`,'success');
-  ['esRef','esDescricao','esValor','esNParcelas','esPrimeiraParcela'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('esForma').value='avista';
-  document.getElementById('esParcelaFields').classList.remove('visible');
+  ['esDescricao','esValor','esNParcelas','esPrimeiraParcela'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   onEsTipoLancamentoChange();
   reconstruirFiltros();renderESTable();atualizarStatsES();renderControle();
 }
-function onSaidaFormaChange(){onEsFormaChange();}
-function onEntradaFormaChange(){onEsFormaChange();}
 function confirmarInsercaoSaida(){confirmarInsercaoES();}
 function confirmarInsercaoEntrada(){confirmarInsercaoES();}
 
