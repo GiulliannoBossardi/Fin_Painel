@@ -306,7 +306,9 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 .flex-gap{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .text-muted{color:var(--text-muted);font-size:.82rem;}
 .divider{height:1px;background:var(--border);margin:16px 0;}
-.field-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.field-row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;min-width:0;}
+.field-row-2 .form-group{min-width:0;}
+.field-row-2 input{min-width:0;max-width:100%;}
 .parcela-fields{background:var(--bg-elevated);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-top:12px;display:none;}
 .parcela-fields.visible{display:block;animation:fadeIn .2s ease;}
 .parcela-fields-title{font-size:.7rem;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:10px;}
