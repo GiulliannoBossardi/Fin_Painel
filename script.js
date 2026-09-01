@@ -1147,7 +1147,7 @@ function gerarResumoVisual(){
 
   /* Gera o card visual */
   const card = document.getElementById('resumoCard');
-  card.innerHTML = buildResumoCard(dados, ref);
+  card.innerHTML = buildResumoCard(dados, ref, pessoa||null);
 
   document.getElementById('resumoArea').style.display='block';
   document.getElementById('resumoEmpty').style.display='none';
@@ -1155,7 +1155,7 @@ function gerarResumoVisual(){
   document.getElementById('btnSalvarImg').style.display='flex';
 }
 
-function buildResumoCard(dados, ref){
+function buildResumoCard(dados, ref, pessoaFiltro){
   const agora = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
   /* Saldo geral considera apenas os itens ainda pendentes (não pagos/recebidos) */
   const totEntPend = dados.reduce((s,d)=>s+d.totEntradasPend,0);
@@ -1182,9 +1182,11 @@ function buildResumoCard(dados, ref){
         </div>
       </div>
       <div class="resumo-print-periodo">${Fmt.ref(ref)}</div>
-    </div>
+    </div>`;
 
-    <!-- Saldo geral -->
+  /* Saldo geral: só faz sentido quando o resumo cobre mais de uma pessoa */
+  if(!pessoaFiltro){
+    html += `
     <div class="resumo-saldo-geral">
       <div class="resumo-saldo-label">Saldo Geral</div>
       <div class="resumo-saldo-valor ${sgClass}">
@@ -1192,11 +1194,12 @@ function buildResumoCard(dados, ref){
       </div>
       <div class="resumo-saldo-desc">${sgDesc} ${Fmt.brl(Math.abs(saldoGeral))}</div>
     </div>`;
+  }
 
   dados.forEach(({pessoa, saidas, entradas, totSaidas, totEntradas, saldo})=>{
     const sClass = saldo>0?'resumo-pos':saldo<0?'resumo-neg':'resumo-zero';
-    const sDesc  = saldo>0?`${pessoa} me deve ${Fmt.brl(saldo)}`
-                 : saldo<0?`Eu devo ${Fmt.brl(Math.abs(saldo))} a ${pessoa}`
+    const sDesc  = saldo>0?`me deve ${Fmt.brl(saldo)}`
+                 : saldo<0?`Eu devo ${Fmt.brl(Math.abs(saldo))}`
                  : `Quites ✅`;
 
     html += `<div class="resumo-pessoa-block">
@@ -1206,7 +1209,9 @@ function buildResumoCard(dados, ref){
           <div class="resumo-pessoa-nome">${pessoa}</div>
           <div class="resumo-pessoa-saldo ${sClass}">${sDesc}</div>
         </div>
-      </div>`;
+      </div>
+      <div class="resumo-cols">
+        <div class="resumo-col">`;
 
     /* Entradas */
     if(entradas.length){
@@ -1218,17 +1223,19 @@ function buildResumoCard(dados, ref){
         const key  = r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);
         const pago = (r.pagos||{})[key]||false;
         const parc = r.parcelaNum!=null?` ${r.parcelaNum}/${r.parcelaTotal}`:'';
-        html += `<div class="resumo-item">
-          <div class="resumo-item-left">
-            <span class="resumo-item-desc">${r.descricao||'—'}${parc?`<span class="resumo-item-parc">${parc}</span>`:''}</span>
-          </div>
+        html += `<div class="resumo-item-col">
+          <span class="resumo-item-desc">${r.descricao||'—'}${parc?`<span class="resumo-item-parc">${parc}</span>`:''}</span>
           <div class="resumo-item-right">
             <span class="resumo-item-val resumo-pos">+${Fmt.brl(r.valorExib)}</span>
             <span class="resumo-status ${pago?'resumo-pago':'resumo-pendente'}">${pago?'✔':'●'}</span>
           </div>
         </div>`;
       });
+    } else {
+      html += `<div class="resumo-col-vazio">—</div>`;
     }
+
+    html += `</div><div class="resumo-col">`;
 
     /* Saídas */
     if(saidas.length){
@@ -1240,18 +1247,19 @@ function buildResumoCard(dados, ref){
         const key  = r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);
         const pago = (r.pagos||{})[key]||false;
         const parc = r.parcelaNum!=null?` ${r.parcelaNum}/${r.parcelaTotal}`:'';
-        html += `<div class="resumo-item">
-          <div class="resumo-item-left">
-            <span class="resumo-item-desc">${r.descricao||'—'}${parc?`<span class="resumo-item-parc">${parc}</span>`:''}</span>
-          </div>
+        html += `<div class="resumo-item-col">
+          <span class="resumo-item-desc">${r.descricao||'—'}${parc?`<span class="resumo-item-parc">${parc}</span>`:''}</span>
           <div class="resumo-item-right">
             <span class="resumo-item-val resumo-neg">−${Fmt.brl(r.valorExib)}</span>
             <span class="resumo-status ${pago?'resumo-pago':'resumo-pendente'}">${pago?'✔':'●'}</span>
           </div>
         </div>`;
       });
+    } else {
+      html += `<div class="resumo-col-vazio">—</div>`;
     }
 
+    html += `</div></div>`; /* fecha resumo-cols */
     html += `</div>`; /* fecha pessoa-block */
   });
 
