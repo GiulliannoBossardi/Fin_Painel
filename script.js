@@ -1112,13 +1112,18 @@ function calcularResumoPessoa(ref, pessoaFiltro){
     : [...new Set([...saidas.map(r=>r.tipo),...entradas.map(r=>r.tipo)]
         .filter(t=>t&&!TIPOS_GENERICOS.has(t)))].sort();
 
+  const _isPago = r => { const key = r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx); return (r.pagos||{})[key]||false; };
+
   return todasPessoas.map(pessoa=>{
     const sP = saidas.filter(r=>r.tipo===pessoa);
     const eP = entradas.filter(r=>r.tipo===pessoa);
     const totSaidas   = sP.reduce((s,r)=>s+r.valorExib,0);
     const totEntradas = eP.reduce((s,r)=>s+r.valorExib,0);
-    const saldo = totEntradas - totSaidas;
-    return {pessoa, saidas:sP, entradas:eP, totSaidas, totEntradas, saldo};
+    /* Apenas itens ainda pendentes (não marcados como pago/recebido) entram no saldo */
+    const totSaidasPend   = sP.filter(r=>!_isPago(r)).reduce((s,r)=>s+r.valorExib,0);
+    const totEntradasPend = eP.filter(r=>!_isPago(r)).reduce((s,r)=>s+r.valorExib,0);
+    const saldo = totEntradasPend - totSaidasPend;
+    return {pessoa, saidas:sP, entradas:eP, totSaidas, totEntradas, totSaidasPend, totEntradasPend, saldo};
   }).filter(p=>p.saidas.length>0||p.entradas.length>0);
 }
 
@@ -1152,9 +1157,10 @@ function gerarResumoVisual(){
 
 function buildResumoCard(dados, ref){
   const agora = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});
-  const totEnt = dados.reduce((s,d)=>s+d.totEntradas,0);
-  const totSai = dados.reduce((s,d)=>s+d.totSaidas,0);
-  const saldoGeral = totEnt - totSai;
+  /* Saldo geral considera apenas os itens ainda pendentes (não pagos/recebidos) */
+  const totEntPend = dados.reduce((s,d)=>s+d.totEntradasPend,0);
+  const totSaiPend = dados.reduce((s,d)=>s+d.totSaidasPend,0);
+  const saldoGeral = totEntPend - totSaiPend;
   const sgClass = saldoGeral>=0?'resumo-pos':'resumo-neg';
   const sgDesc  = saldoGeral>0?'No total, me devem':'No total, eu devo';
 
