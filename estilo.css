@@ -600,7 +600,7 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
   border: 1px solid var(--border);
   border-radius: 16px;
   overflow: hidden;
-  max-width: 480px;
+  max-width: 720px;
   margin: 0 auto;
   font-family: var(--font-body);
 }
@@ -737,50 +737,39 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 .resumo-grupo-ent { color: var(--income); background: rgba(0,201,122,.05); }
 .resumo-grupo-sai { color: var(--expense); background: rgba(255,77,106,.05); }
 
-/* Item de lançamento em coluna (Entradas/Saídas lado a lado) */
-.resumo-item-col {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 12px;
-  border-top: 1px solid var(--border);
-}
-.resumo-item-col .resumo-item-desc {
-  font-size: .76rem;
-}
-.resumo-item-col .resumo-item-right {
-  justify-content: space-between;
-  width: 100%;
-}
-.resumo-item-col .resumo-item-val {
-  font-size: .78rem;
-}
-
-/* Item de lançamento */
+/* Item de lançamento (descrição, parcela, valor e status numa única linha) */
 .resumo-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 18px;
+  padding: 8px 12px;
   border-top: 1px solid var(--border);
   gap: 8px;
 }
-.resumo-item-left { min-width: 0; flex: 1; }
-.resumo-item-desc {
-  font-size: .82rem;
-  color: var(--text-primary);
+.resumo-item-left {
+  min-width: 0;
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  overflow: hidden;
+}
+.resumo-item-desc {
+  font-size: .78rem;
+  color: var(--text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .resumo-item-parc {
   font-family: var(--font-mono);
-  font-size: .7rem;
+  font-size: .66rem;
   color: var(--text-muted);
   background: var(--bg-overlay);
   padding: 1px 5px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 .resumo-item-right {
   display: flex;
@@ -790,8 +779,9 @@ select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='htt
 }
 .resumo-item-val {
   font-family: var(--font-mono);
-  font-size: .82rem;
+  font-size: .78rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 /* Status pago/pendente */

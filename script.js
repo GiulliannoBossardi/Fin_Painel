@@ -1223,8 +1223,10 @@ function buildResumoCard(dados, ref, pessoaFiltro){
         const key  = r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);
         const pago = (r.pagos||{})[key]||false;
         const parc = r.parcelaNum!=null?` ${r.parcelaNum}/${r.parcelaTotal}`:'';
-        html += `<div class="resumo-item-col">
-          <span class="resumo-item-desc">${r.descricao||'—'}${parc?`<span class="resumo-item-parc">${parc}</span>`:''}</span>
+        html += `<div class="resumo-item">
+          <div class="resumo-item-left">
+            <span class="resumo-item-desc">${r.descricao||'—'}</span>${parc?`<span class="resumo-item-parc">${parc}</span>`:''}
+          </div>
           <div class="resumo-item-right">
             <span class="resumo-item-val resumo-pos">+${Fmt.brl(r.valorExib)}</span>
             <span class="resumo-status ${pago?'resumo-pago':'resumo-pendente'}">${pago?'✔':'●'}</span>
@@ -1247,8 +1249,10 @@ function buildResumoCard(dados, ref, pessoaFiltro){
         const key  = r._parcelaIdx==='av'?'av':parseInt(r._parcelaIdx);
         const pago = (r.pagos||{})[key]||false;
         const parc = r.parcelaNum!=null?` ${r.parcelaNum}/${r.parcelaTotal}`:'';
-        html += `<div class="resumo-item-col">
-          <span class="resumo-item-desc">${r.descricao||'—'}${parc?`<span class="resumo-item-parc">${parc}</span>`:''}</span>
+        html += `<div class="resumo-item">
+          <div class="resumo-item-left">
+            <span class="resumo-item-desc">${r.descricao||'—'}</span>${parc?`<span class="resumo-item-parc">${parc}</span>`:''}
+          </div>
           <div class="resumo-item-right">
             <span class="resumo-item-val resumo-neg">−${Fmt.brl(r.valorExib)}</span>
             <span class="resumo-status ${pago?'resumo-pago':'resumo-pendente'}">${pago?'✔':'●'}</span>
