@@ -527,7 +527,7 @@ function renderESTable(){
   const cfRef   =cf('cfESRef');
   const cfNatEl =document.getElementById('cfESNatureza');
   const cfNat   =cfNatEl?cfNatEl.value:'';
-  const cfTipo  =cf('cfESTipo');
+  const cfTipoEl=document.getElementById('cfESTipo');
   const cfDesc  =cf('cfESDesc');
   const cfVal   =cf('cfESValor');
   const cfStEl  =document.getElementById('cfESStatus');
@@ -537,10 +537,19 @@ function renderESTable(){
   let sRows=expandirSaidas (DB.get('saidas')  ||[],filtroAno,filtroRef).map(r=>({...r,_natureza:'saida'}));
   let rows=[...eRows,...sRows];
 
+  /* Popula o dropdown de Tipo com as opções realmente presentes na coluna (período/filtros atuais) */
+  if(cfTipoEl){
+    const tiposPresentes=[...new Set(rows.map(r=>r.tipo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    const valorAtual=cfTipoEl.value;
+    cfTipoEl.innerHTML='<option value="">Todos</option>'+tiposPresentes.map(t=>`<option value="${t}">${t}</option>`).join('');
+    cfTipoEl.value=tiposPresentes.includes(valorAtual)?valorAtual:'';
+  }
+  const cfTipoAtual=cfTipoEl?cfTipoEl.value:'';
+
   /* Aplica todos os filtros de coluna */
   if(cfRef)   rows=rows.filter(r=>Fmt.ref(r.parcelaRef).toLowerCase().includes(cfRef));
   if(cfNat)   rows=rows.filter(r=>r._natureza===cfNat);
-  if(cfTipo)  rows=rows.filter(r=>(r.tipo||'').toLowerCase().includes(cfTipo));
+  if(cfTipoAtual) rows=rows.filter(r=>r.tipo===cfTipoAtual);
   if(cfDesc)  rows=rows.filter(r=>(r.descricao||'').toLowerCase().includes(cfDesc));
   if(cfVal)   rows=rows.filter(r=>Fmt.brl(r.valorExib).toLowerCase().includes(cfVal));
   if(cfStatus){
@@ -699,20 +708,27 @@ function onEsTipoLancamentoChange(){
   const btn=document.getElementById('esBtnConfirmar');
   const btnLabel=document.getElementById('esBtnLabel');
   const descEl=document.getElementById('esDescricao');
+  const dividirLabel=document.getElementById('esDividirLabel');
+  const divisaoValorLabel=document.getElementById('esDivisaoValorLabel');
   if(isEntrada){
     icon.style.background='rgba(0,201,122,.15)';icon.style.color='var(--income)';
     icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>';
     title.textContent='Registrar Entrada';sub.textContent='Adicionar recebimento';
     btn.style.background='var(--income)';btnLabel.textContent='Confirmar Entrada';
     descEl.placeholder='Ex: Aluguel, freelance...';
+    if(dividirLabel)dividirLabel.textContent='Dividir esta receita com alguém';
+    if(divisaoValorLabel)divisaoValorLabel.textContent='Valor da parte dela (a repassar)';
   } else {
     icon.style.background='rgba(255,77,106,.15)';icon.style.color='var(--expense)';
     icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="7 16 12 21 17 16"/><line x1="12" y1="21" x2="12" y2="9"/></svg>';
     title.textContent='Registrar Sa\u00edda';sub.textContent='Adicionar nova despesa';
     btn.style.background='var(--expense)';btnLabel.textContent='Confirmar Sa\u00edda';
     descEl.placeholder='Ex: Conta de luz, Nubank...';
+    if(dividirLabel)dividirLabel.textContent='Dividir esta despesa com alguém';
+    if(divisaoValorLabel)divisaoValorLabel.textContent='Valor da parte dela (a receber)';
   }
   atualizarValorLabelES();
+  atualizarPreviewDivisaoES();
 }
 /* Rótulo do valor: à vista (1 parcela) vs parcelado (2+) — decidido pelo Nº de Parcelas */
 function atualizarValorLabelES(){
@@ -722,6 +738,64 @@ function atualizarValorLabelES(){
   if(!valorLabel)return;
   valorLabel.textContent=n>1?'Valor de cada parcela':(tipo==='entrada'?'Valor Recebido':'Valor Pago');
 }
+
+/* ============================================
+   DIVISÃO DE LANÇAMENTO ENTRE 2 PESSOAS
+============================================ */
+let esDivisaoManual=false; // true quando o usuário editou o valor da divisão manualmente (não usar mais o auto 50/50)
+
+function getPessoasConhecidas(){
+  const saidas=DB.get('saidas')||[];
+  const entradas=DB.get('entradas')||[];
+  const set=new Set([...saidas,...entradas].map(r=>r.tipo).filter(t=>t&&!TIPOS_GENERICOS.has(t)));
+  return [...set].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+}
+
+function onEsDividirChange(){
+  const on=document.getElementById('esDividir').checked;
+  document.getElementById('esDivisaoDetalhes').style.display=on?'block':'none';
+  if(on){
+    document.getElementById('esPessoasList').innerHTML=getPessoasConhecidas().map(p=>`<option value="${p}"></option>`).join('');
+    esDivisaoManual=false;
+    aplicarDivisao50ES();
+  }
+}
+
+function aplicarDivisao50ES(){
+  const total=Fmt.parse(document.getElementById('esValor').value);
+  const metade=total/2;
+  document.getElementById('esDivisaoValor').value=metade>0?Fmt.toInput(metade):'';
+  esDivisaoManual=false;
+  atualizarPreviewDivisaoES();
+}
+
+/* Chamado a cada alteração no valor principal, para manter a divisão 50/50 em sincronia (se o usuário não a editou manualmente) */
+function sincronizarDivisaoAoDigitarValorES(){
+  if(document.getElementById('esDividir').checked && !esDivisaoManual){
+    const total=Fmt.parse(document.getElementById('esValor').value);
+    const metade=total/2;
+    document.getElementById('esDivisaoValor').value=metade>0?Fmt.toInput(metade):'';
+  }
+  atualizarPreviewDivisaoES();
+}
+
+function atualizarPreviewDivisaoES(){
+  const previewEl=document.getElementById('esDivisaoPreview');
+  if(!previewEl)return;
+  if(!document.getElementById('esDividir').checked){previewEl.textContent='';return;}
+  const tipo=document.getElementById('esTipoLancamento').value;
+  const total=Fmt.parse(document.getElementById('esValor').value);
+  const parte=Fmt.parse(document.getElementById('esDivisaoValor').value);
+  const pessoa=(document.getElementById('esDivisaoPessoa').value||'a pessoa').trim()||'a pessoa';
+  if(!total||!parte){previewEl.textContent='Informe o valor total e o valor da parte dela para ver o resumo.';return;}
+  const minhaParte=total-parte;
+  if(tipo==='saida'){
+    previewEl.innerHTML=`Você continua pagando o total (<strong>${Fmt.brl(total)}</strong>). Será criada automaticamente uma <strong style="color:var(--income)">Entrada de ${Fmt.brl(parte)}</strong> de <strong>${pessoa}</strong> (a receber) — sua parte líquida fica em ${Fmt.brl(minhaParte)}.`;
+  } else {
+    previewEl.innerHTML=`Você recebe o total (<strong>${Fmt.brl(total)}</strong>). Será criada automaticamente uma <strong style="color:var(--expense)">Saída de ${Fmt.brl(parte)}</strong> para ${pessoa} (a repassar) — sua parte líquida fica em ${Fmt.brl(minhaParte)}.`;
+  }
+}
+
 function confirmarInsercaoES(){
   const tipo=document.getElementById('esTipoLancamento').value;
   const tipoConta=document.getElementById('esTipoConta').value;
@@ -734,12 +808,35 @@ function confirmarInsercaoES(){
   if(!valor){Toast.show('Informe o valor','error');return;}
   if(!primeiraParcela){Toast.show('Informe o m\u00eas/ano da 1\u00aa parcela (ou \u00fanica)','error');return;}
   if(!nParcelas||nParcelas<1){Toast.show('Informe o n\u00famero de parcelas (1 para \u00e0 vista)','error');return;}
+
+  /* Divisão com outra pessoa */
+  const dividir=document.getElementById('esDividir').checked;
+  const pessoaDivisao=document.getElementById('esDivisaoPessoa').value.trim();
+  const valorDivisao=Fmt.parse(document.getElementById('esDivisaoValor').value);
+  if(dividir){
+    if(!pessoaDivisao){Toast.show('Informe o nome da pessoa para dividir','error');return;}
+    if(!valorDivisao){Toast.show('Informe o valor da parte dela','error');return;}
+    if(valorDivisao>=valor){Toast.show('O valor da parte dela deve ser menor que o valor total','error');return;}
+  }
+
   const dbKey=tipo==='entrada'?'entradas':'saidas';
   const forma=nParcelas>1?'parcelado':'avista';
   const rec={id:Fmt.uid(),ref:primeiraParcela,tipo:tipoConta,descricao,forma,valor,pagos:{},nParcelas,primeiraParcela};
   const arr=DB.get(dbKey)||[];arr.push(rec);DB.set(dbKey,arr);
-  Toast.show(`${tipo==='entrada'?'Entrada':'Sa\u00edda'} "${descricao}" registrada`,'success');
-  ['esDescricao','esValor','esNParcelas','esPrimeiraParcela'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+
+  let msg=`${tipo==='entrada'?'Entrada':'Sa\u00edda'} "${descricao}" registrada`;
+  if(dividir){
+    const dbKey2=tipo==='entrada'?'saidas':'entradas';
+    const rec2={id:Fmt.uid(),ref:primeiraParcela,tipo:pessoaDivisao,descricao,forma,valor:valorDivisao,pagos:{},nParcelas,primeiraParcela};
+    const arr2=DB.get(dbKey2)||[];arr2.push(rec2);DB.set(dbKey2,arr2);
+    msg+=` · ${tipo==='entrada'?'Sa\u00edda':'Entrada'} de ${Fmt.brl(valorDivisao)} para ${pessoaDivisao} criada automaticamente`;
+  }
+  Toast.show(msg,'success');
+
+  ['esDescricao','esValor','esNParcelas','esPrimeiraParcela','esDivisaoPessoa','esDivisaoValor'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('esDividir').checked=false;
+  document.getElementById('esDivisaoDetalhes').style.display='none';
+  esDivisaoManual=false;
   onEsTipoLancamentoChange();
   reconstruirFiltros();renderESTable();atualizarStatsES();renderControle();
 }

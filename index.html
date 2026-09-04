@@ -194,7 +194,11 @@
                           <option value="saida">Saída</option>
                         </select>
                       </td>
-                      <td><input class="col-filter-input" id="cfESTipo"    placeholder="Tipo..."     oninput="renderESTable()"/></td>
+                      <td>
+                        <select class="col-filter-input" id="cfESTipo" onchange="renderESTable()" style="padding:3px 6px;font-size:.75rem;width:100%;">
+                          <option value="">Todos</option>
+                        </select>
+                      </td>
                       <td><input class="col-filter-input" id="cfESDesc"    placeholder="Desc..."     oninput="renderESTable()"/></td>
                       <td></td>
                       <td><input class="col-filter-input" id="cfESValor"   placeholder="Valor..."    oninput="renderESTable()"/></td>
@@ -235,7 +239,7 @@
               </div>
               <div class="form-group"><label>Tipo de Conta</label><select id="esTipoConta"></select></div>
               <div class="form-group"><label>Descrição</label><input type="text" id="esDescricao" placeholder="Ex: Aluguel, freelance..."/></div>
-              <div class="form-group"><label id="esValorLabel">Valor Recebido</label><div class="currency-input-wrap"><span class="currency-prefix">R$</span><input type="text" id="esValor" placeholder="0.000,00" oninput="maskCurrency(this)"/></div></div>
+              <div class="form-group"><label id="esValorLabel">Valor Recebido</label><div class="currency-input-wrap"><span class="currency-prefix">R$</span><input type="text" id="esValor" placeholder="0.000,00" oninput="maskCurrency(this);sincronizarDivisaoAoDigitarValorES()"/></div></div>
             </div>
             <div class="parcela-fields visible" id="esParcelaFields">
               <div class="parcela-fields-title">Detalhes do Parcelamento</div>
@@ -244,6 +248,29 @@
                 <div class="form-group"><label>Nº de Parcelas</label><input type="text" id="esNParcelas" placeholder="Ex: 1" title="1 = à vista · 2 ou mais = parcelado" oninput="this.value=this.value.replace(/\D/g,'');atualizarValorLabelES();"/></div>
               </div>
               <div class="text-muted" style="font-size:.72rem;margin-top:6px;">1 parcela = à vista · 2 ou mais = parcelado</div>
+            </div>
+            <div class="parcela-fields visible" id="esDivisaoFields">
+              <label class="check-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                <input type="checkbox" id="esDividir" onchange="onEsDividirChange()"/>
+                <span id="esDividirLabel">Dividir esta despesa com alguém</span>
+              </label>
+              <div id="esDivisaoDetalhes" style="display:none;margin-top:12px;">
+                <div class="field-row-2">
+                  <div class="form-group">
+                    <label>Pessoa</label>
+                    <input type="text" id="esDivisaoPessoa" list="esPessoasList" placeholder="Ex: Bruna" oninput="atualizarPreviewDivisaoES()"/>
+                    <datalist id="esPessoasList"></datalist>
+                  </div>
+                  <div class="form-group">
+                    <label id="esDivisaoValorLabel">Valor da parte dela (a receber)</label>
+                    <div class="currency-input-wrap"><span class="currency-prefix">R$</span><input type="text" id="esDivisaoValor" placeholder="0.000,00" oninput="maskCurrency(this);esDivisaoManual=true;atualizarPreviewDivisaoES()"/></div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:8px;margin:8px 0 2px;">
+                  <button type="button" class="filter-clear" style="font-size:.7rem;" onclick="aplicarDivisao50ES()">50/50</button>
+                </div>
+                <div class="text-muted" id="esDivisaoPreview" style="font-size:.74rem;margin-top:6px;"></div>
+              </div>
             </div>
             <div class="btn-confirmar-wrap"><button class="btn btn-primary btn-full btn-confirmar" id="esBtnConfirmar" onclick="confirmarInsercaoES()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span id="esBtnLabel">Confirmar Entrada</span></button></div>
           </div>
