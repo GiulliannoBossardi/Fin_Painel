@@ -154,16 +154,14 @@
           <button class="filter-clear" onclick="limparFiltro()">✕ Limpar</button>
           <span id="esFiltroLabel" class="filter-label-badge" style="display:none;"></span>
         </div>
-        <!-- Stats unificados: 3 cards de Entradas + 3 de Saídas -->
-        <div class="grid-3 mb-20">
-          <div class="stat-card green"><div class="stat-label">Total de Entradas</div><div class="stat-value income" id="entradaStatTotal">R$ 0,00</div><div class="stat-sub">Soma das parcelas no filtro</div></div>
-          <div class="stat-card red"><div class="stat-label">Total de Saídas</div><div class="stat-value expense" id="saidaStatTotal">R$ 0,00</div><div class="stat-sub">Soma das parcelas no filtro</div></div>
-          <div class="stat-card blue" id="esSaldoCard"><div class="stat-label">Saldo do Período</div><div class="stat-value" id="esStatSaldo">R$ 0,00</div><div class="stat-sub">Entradas − Saídas</div></div>
-        </div>
-        <div class="grid-3 mb-20">
-          <div class="stat-card warn"><div class="stat-label">A Receber</div><div class="stat-value neutral" id="entradaStatPendente">R$ 0,00</div><div class="stat-sub">Entradas pendentes</div></div>
-          <div class="stat-card warn"><div class="stat-label">A Pagar</div><div class="stat-value neutral" id="saidaStatPendente">R$ 0,00</div><div class="stat-sub">Saídas pendentes</div></div>
-          <div class="stat-card green"><div class="stat-label">Recebido / Pago</div><div class="stat-value income" id="esStatConfirmado">R$ 0,00</div><div class="stat-sub">Entradas recebidas − Saídas pagas</div></div>
+        <!-- Stats unificados: 6 cards compactos lado a lado -->
+        <div class="grid-6 mb-20">
+          <div class="stat-card compact green"><div class="stat-label">Total de Entradas</div><div class="stat-value income" id="entradaStatTotal">R$ 0,00</div><div class="stat-sub">Soma das parcelas no filtro</div></div>
+          <div class="stat-card compact red"><div class="stat-label">Total de Saídas</div><div class="stat-value expense" id="saidaStatTotal">R$ 0,00</div><div class="stat-sub">Soma das parcelas no filtro</div></div>
+          <div class="stat-card compact blue" id="esSaldoCard"><div class="stat-label">Saldo do Período</div><div class="stat-value" id="esStatSaldo">R$ 0,00</div><div class="stat-sub">Entradas − Saídas</div></div>
+          <div class="stat-card compact warn"><div class="stat-label">A Receber</div><div class="stat-value neutral" id="entradaStatPendente">R$ 0,00</div><div class="stat-sub">Entradas pendentes</div></div>
+          <div class="stat-card compact warn"><div class="stat-label">A Pagar</div><div class="stat-value neutral" id="saidaStatPendente">R$ 0,00</div><div class="stat-sub">Saídas pendentes</div></div>
+          <div class="stat-card compact green"><div class="stat-label">Recebido / Pago</div><div class="stat-value income" id="esStatConfirmado">R$ 0,00</div><div class="stat-sub">Entradas recebidas − Saídas pagas</div></div>
         </div>
         <!-- grid-2: tabela unificada + painel inserção lado a lado -->
         <div class="grid-2 has-panel">

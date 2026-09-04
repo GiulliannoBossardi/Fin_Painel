@@ -287,7 +287,7 @@ function maskCurrency(input){let v=input.value.replace(/\D/g,'');if(!v){input.va
 /* ============================================
    FILTRO GLOBAL
 ============================================ */
-let filtroAno='', filtroRef='';
+let filtroAno=String(new Date().getFullYear()), filtroRef='';
 
 const abaFiltroAnos =['filtroAno','esFiltroAnoDisp','ctrlFiltroAnoDisp','investFiltroAnoDisp'];
 const abaFiltroRefs =['filtroRef','esFiltroRefDisp','ctrlFiltroRefDisp','investFiltroRefDisp'];
@@ -303,12 +303,14 @@ function getAllRefs(){
       for(let i=0;i<(e.nParcelas||1);i++)set.add(Fmt.addMonths(e.primeiraParcela,i));
     }else if(e.ref){set.add(e.ref);}
   });
-  return[...set].sort().reverse();
+  /* Ordem cronológica: do mais antigo para o mais novo */
+  return[...set].sort();
 }
 
 function reconstruirFiltros(){
   const allRefs=getAllRefs();
-  const anos=[...new Set(allRefs.map(r=>r.split('-')[0]))].sort().reverse();
+  const anoAtual=String(new Date().getFullYear());
+  const anos=[...new Set([...allRefs.map(r=>r.split('-')[0]),anoAtual])].sort();
   const refs=filtroAno?allRefs.filter(r=>r.startsWith(filtroAno+'-')):allRefs;
 
   abaFiltroAnos.forEach(id=>{
@@ -683,7 +685,7 @@ function atualizarStatsES(eRows,sRows){
   if(g('saidaStatPendente'))  g('saidaStatPendente').textContent=Fmt.brl(pendS);
   const saldoEl=g('esStatSaldo');
   if(saldoEl){saldoEl.textContent=saldo>=0?Fmt.brl(saldo):`\u2212${Fmt.brl(Math.abs(saldo))}`;saldoEl.className='stat-value '+(saldo>=0?'income':'expense');}
-  const cardEl=g('esSaldoCard');if(cardEl)cardEl.className='stat-card '+(saldo>=0?'green':'red');
+  const cardEl=g('esSaldoCard');if(cardEl)cardEl.className='stat-card compact '+(saldo>=0?'green':'red');
   const confEl=g('esStatConfirmado');if(confEl)confEl.textContent=Fmt.brl(pagoE-pagoS);
 }
 
@@ -1451,7 +1453,7 @@ const _origNavigateTo = navigateTo;
    ABA CONSOLIDADO
 ============================================ */
 const consSortSt = { col: 'ref', dir: -1 };
-let consFiltroAno = '';
+let consFiltroAno = String(new Date().getFullYear());
 
 function getConsolidadoRows(ano) {
   const refsSet = new Set();
@@ -1491,13 +1493,16 @@ function getConsolidadoRows(ano) {
 
 function reconstruirFiltroConsolidado() {
   const allRefs = getAllRefs();
-  const anos = [...new Set(allRefs.map(r => r.split('-')[0]))].sort().reverse();
+  const anoAtual = String(new Date().getFullYear());
+  const anos = [...new Set([...allRefs.map(r => r.split('-')[0]), anoAtual])].sort();
   const sel = document.getElementById('consFiltroAno');
   if (!sel) return;
   const atual = sel.value;
   sel.innerHTML = '<option value="">Todos</option>';
   anos.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; sel.appendChild(o); });
   sel.value = consFiltroAno || atual;
+  const lbl = document.getElementById('consFiltroLabel');
+  if (lbl) { lbl.textContent = consFiltroAno ? 'Ano: ' + consFiltroAno : ''; lbl.style.display = consFiltroAno ? 'inline' : 'none'; }
 }
 
 function onConsFiltroAnoChange() {
